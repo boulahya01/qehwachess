@@ -9,7 +9,7 @@ BEGIN
     RAISE EXCEPTION 'Minimal signup or protected default role failed';
   END IF;
   UPDATE auth.users SET email='updated-' || test_id || '@example.invalid' WHERE id=test_id;
-  IF NOT EXISTS (SELECT 1 FROM public.profiles WHERE id=test_id AND email='updated-' || test_id || '@example.invalid') THEN
+  IF NOT EXISTS (SELECT 1 FROM public.profile_contacts WHERE profile_id=test_id AND email='updated-' || test_id || '@example.invalid') THEN
     RAISE EXCEPTION 'Confirmed email synchronization failed';
   END IF;
   PERFORM set_config('request.jwt.claim.sub', test_id::text, true);
