@@ -159,8 +159,8 @@ export function HomePage() {
 
       {/* Upcoming */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="grid lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-1">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="min-w-0 lg:col-span-1">
             <h2 className="text-2xl sm:text-3xl font-bold text-white">{t('Happening Soon')}</h2>
             <p className="text-gray-500 mt-1">{t('Next tournaments across Morocco')}</p>
             <Link to={{ name: 'tournaments' }}>
@@ -171,12 +171,12 @@ export function HomePage() {
             </Link>
           </div>
 
-          <div className="lg:col-span-2 flex flex-col gap-4">
+          <div className="min-w-0 lg:col-span-2 flex flex-col gap-4">
             {upcoming.map((t) => {
               const days = getDaysUntil(t.start_date);
               return (
                 <Link key={t.id} to={{ name: 'tournament', id: t.id }}>
-                  <Card hover className="p-5 flex items-center gap-5 group cursor-pointer">
+                  <Card hover className="p-5 flex items-center gap-3 sm:gap-5 group cursor-pointer">
                     {/* Date block */}
                     <div className="flex-shrink-0 w-16 text-center">
                       <div className="text-3xl font-bold text-brand-400">{days === 0 ? translate('NOW') : days}</div>
@@ -188,7 +188,7 @@ export function HomePage() {
                       <h3 className="font-semibold text-white group-hover:text-brand-300 transition-colors truncate">
                         {t.title}
                       </h3>
-                      <div className="flex items-center gap-4 mt-1.5 text-sm text-gray-500">
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1.5 text-sm text-gray-500">
                         <span className="flex items-center gap-1">
                           <MapPin className="w-3.5 h-3.5" />
                           {t.city?.name}
