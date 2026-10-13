@@ -7,7 +7,7 @@ vi.mock('@/context/LanguageContext', () => ({ useLanguage: () => ({ t: (text: st
 vi.mock('@/context/RouterContext', () => ({ Link: ({ children }: { children: React.ReactNode }) => <a>{children}</a> }));
 
 it.each([
-  [undefined, '64 player capacity'],
+  [undefined, 'Capacity: 64'],
   [0, '64 spots'],
   [1, '63 spots'],
   [64, 'Full'],
