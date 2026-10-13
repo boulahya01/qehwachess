@@ -1,0 +1,10 @@
+project_id = "qehwachess"
+
+[functions.discord-integrations]
+verify_jwt = false
+
+[functions.discord-connect-callback]
+verify_jwt = false
+
+[functions.discord-announcement-worker]
+verify_jwt = false
