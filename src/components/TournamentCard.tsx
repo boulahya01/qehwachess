@@ -14,8 +14,7 @@ import { useLanguage } from '@/context/LanguageContext';
 export function TournamentCard({ tournament }: { tournament: Tournament }) {
   const { t, language } = useLanguage();
   const daysUntil = getDaysUntil(tournament.start_date);
-  const spotsLeft = tournament.max_participants - (tournament.registration_count ?? 0);
-  const isFull = spotsLeft <= 0;
+  const spotsLeft = tournament.registration_count == null ? null : Math.max(0, tournament.max_participants - tournament.registration_count);
   const isPast = daysUntil < 0;
 
   return (
@@ -84,7 +83,7 @@ export function TournamentCard({ tournament }: { tournament: Tournament }) {
             <div className="flex items-center gap-4 text-xs">
               <div className="flex items-center gap-1.5 text-gray-400">
                 <Users className="w-3.5 h-3.5" />
-                <span>{isFull ? t('Full') : `${spotsLeft} ${t('spots')}`}</span>
+                <span>{spotsLeft === null ? `${tournament.max_participants} ${t('player capacity')}` : spotsLeft === 0 ? t('Full') : `${spotsLeft} ${t('spots')}`}</span>
               </div>
               <div className="flex items-center gap-1.5 text-gray-400">
                 <span className="font-semibold text-brand-300">{t(formatPrice(Number(tournament.entry_fee)))}</span>

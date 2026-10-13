@@ -11,6 +11,10 @@ const languageNames: Record<Language, string> = {
 
 const translations: Record<Exclude<Language, 'en'>, Record<string, string>> = {
   fr: {
+    'This page could not be loaded. Please reload and try again.': 'Impossible de charger cette page. Rechargez la page et réessayez.',
+    'Could not restore your session. Please reload and try again.': 'Impossible de restaurer votre session. Rechargez la page et réessayez.',
+    'Could not load your profile. Please reload and try again.': 'Impossible de charger votre profil. Rechargez la page et réessayez.',
+    Reload: 'Recharger',
     'Could not load tournaments. Please try again.': 'Impossible de charger les tournois. Veuillez réessayer.',
     'Could not load tournament details. Please try again.': 'Impossible de charger les détails du tournoi. Veuillez réessayer.',
     'Could not load registration availability. Please try again.': 'Impossible de charger les places disponibles. Veuillez réessayer.',
@@ -368,6 +372,7 @@ const translations: Record<Exclude<Language, 'en'>, Record<string, string>> = {
     Completed: 'Terminé',
     Full: 'Complet',
     spots: 'places',
+    'player capacity': 'joueurs maximum',
     'No tournaments pending review.': 'Aucun tournoi en attente de validation.',
     by: 'par',
     'Admin access required. This area is restricted to platform administrators.': 'Accès administrateur requis. Cette zone est réservée aux administrateurs.',
@@ -464,6 +469,10 @@ const translations: Record<Exclude<Language, 'en'>, Record<string, string>> = {
     'Invalid login credentials': 'Identifiants de connexion invalides',
   },
   ar: {
+    'This page could not be loaded. Please reload and try again.': 'تعذر تحميل هذه الصفحة. يرجى إعادة تحميل الصفحة والمحاولة مرة أخرى.',
+    'Could not restore your session. Please reload and try again.': 'تعذر استعادة جلستك. يرجى إعادة تحميل الصفحة والمحاولة مرة أخرى.',
+    'Could not load your profile. Please reload and try again.': 'تعذر تحميل ملفك الشخصي. يرجى إعادة تحميل الصفحة والمحاولة مرة أخرى.',
+    Reload: 'إعادة التحميل',
     'Could not load tournaments. Please try again.': 'تعذر تحميل البطولات. يرجى المحاولة مرة أخرى.',
     'Could not load tournament details. Please try again.': 'تعذر تحميل تفاصيل البطولة. يرجى المحاولة مرة أخرى.',
     'Could not load registration availability. Please try again.': 'تعذر تحميل الأماكن المتاحة. يرجى المحاولة مرة أخرى.',
@@ -820,6 +829,7 @@ const translations: Record<Exclude<Language, 'en'>, Record<string, string>> = {
     Completed: 'مكتمل',
     Full: 'مكتمل',
     spots: 'أماكن',
+    'player capacity': 'لاعبًا كحد أقصى',
     'No tournaments pending review.': 'لا توجد بطولات بانتظار المراجعة.',
     by: 'بواسطة',
     'Admin access required. This area is restricted to platform administrators.': 'يلزم دخول المدير. هذه المنطقة مخصصة لمديري المنصة.',

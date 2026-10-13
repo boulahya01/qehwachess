@@ -18,6 +18,24 @@ export function useCities() {
   return { cities, loading };
 }
 
+export function usePlayerCount() {
+  const [playerCount, setPlayerCount] = useState<number | null>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    void (async () => {
+      try {
+        const { count, error } = await supabase.from('profiles').select('id', { count: 'exact', head: true })
+          .eq('role', 'player').abortSignal(controller.signal);
+        if (!controller.signal.aborted) setPlayerCount(error ? null : count);
+      } catch {
+        if (!controller.signal.aborted) setPlayerCount(null);
+      }
+    })();
+    return () => controller.abort();
+  }, []);
+  return playerCount;
+}
+
 export function useTournaments(filters?: {
   cityId?: string;
   format?: string;

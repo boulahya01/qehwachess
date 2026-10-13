@@ -1,5 +1,5 @@
 import { Link } from '@/context/RouterContext';
-import { Crown, Mail, Twitter, Instagram, Facebook } from 'lucide-react';
+import { Crown, Mail } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 
 export function Footer() {
@@ -22,17 +22,6 @@ export function Footer() {
             <p className="text-sm text-gray-500 max-w-md leading-relaxed">
               {t('The central platform for chess in Morocco. Discover tournaments across the kingdom, connect with clubs, and compete with the best players in the country.')}
             </p>
-            <div className="flex items-center gap-3 mt-6">
-              {[Twitter, Instagram, Facebook].map((Icon, i) => (
-                <a
-                  key={i}
-                  href="#"
-                  className="w-9 h-9 rounded-lg bg-surface-800 border border-surface-700 flex items-center justify-center text-gray-500 hover:text-brand-400 hover:border-brand-500/40 transition-all"
-                >
-                  <Icon className="w-4 h-4" />
-                </a>
-              ))}
-            </div>
           </div>
 
           {/* Quick links */}

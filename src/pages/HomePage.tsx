@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { CircleMarker, MapContainer, TileLayer, Tooltip } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Link } from '@/context/RouterContext';
-import { useTournaments, useCities } from '@/hooks/useData';
+import { useTournaments, useCities, usePlayerCount } from '@/hooks/useData';
 import { TournamentCard } from '@/components/TournamentCard';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -26,6 +26,7 @@ export function HomePage() {
   const translate = t;
   const { tournaments, loading, error } = useTournaments();
   const { cities } = useCities();
+  const playerCount = usePlayerCount();
 
   const featured = useMemo(
     () => tournaments.filter((t) => t.featured).slice(0, 4),
@@ -44,9 +45,9 @@ export function HomePage() {
     () => ({
       tournaments: tournaments.length,
       cities: cities.length,
-      players: 1250,
+      players: playerCount,
     }),
-    [tournaments, cities]
+    [tournaments, cities, playerCount]
   );
 
   return (
@@ -111,7 +112,7 @@ export function HomePage() {
             {[
               { icon: Trophy, label: t('Tournaments'), value: stats.tournaments + '+' },
               { icon: MapPin, label: t('Cities'), value: stats.cities + '+' },
-              { icon: Users, label: t('Players'), value: stats.players + '+' },
+              { icon: Users, label: t('Players'), value: stats.players ?? '—' },
             ].map((stat) => (
               <div key={stat.label} className="flex items-center gap-2 text-sm text-gray-400">
                 <stat.icon className="h-4 w-4 text-brand-600" />

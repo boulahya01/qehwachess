@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import type { Profile, UserRole } from '@/types';
@@ -9,6 +9,7 @@ interface AuthContextValue {
   user: User | null;
   profile: Profile | null;
   loading: boolean;
+  error: string | null;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signUp: (
     email: string,
@@ -35,46 +36,86 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const active = useRef(false);
+  const currentUserId = useRef<string | null>(null);
+  const profileRequest = useRef(0);
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        (async () => {
-          await loadProfile(session.user.id);
-          setLoading(false);
-        })();
-      } else {
-        setLoading(false);
-      }
-    });
-
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        (async () => {
-          await loadProfile(session.user.id);
-          setLoading(false);
-        })();
-      } else {
+  const loadProfile = useCallback(async (userId: string) => {
+    if (!active.current || currentUserId.current !== userId) return { error: 'Your session changed. Please sign in again.' };
+    const request = ++profileRequest.current;
+    const isCurrent = () => active.current && currentUserId.current === userId && request === profileRequest.current;
+    const message = 'Could not load your profile. Please reload and try again.';
+    try {
+      const { data, error: profileError } = await supabase
+        .from('profiles').select('*, city:cities(*)').eq('id', userId).maybeSingle();
+      if (!isCurrent()) return { error: null };
+      if (profileError || !data) {
         setProfile(null);
-        setLoading(false);
+        setError(message);
+        return { error: message };
       }
-    });
-
-    return () => listener.subscription.unsubscribe();
+      setProfile(data as Profile);
+      setError(null);
+      return { error: null };
+    } catch {
+      if (isCurrent()) { setProfile(null); setError(message); }
+      return { error: message };
+    } finally {
+      if (isCurrent()) setLoading(false);
+    }
   }, []);
 
-  async function loadProfile(userId: string) {
-    const { data } = await supabase
-      .from('profiles')
-      .select('*, city:cities(*)')
-      .eq('id', userId)
-      .maybeSingle();
-    setProfile(data as Profile | null);
-  }
+  useEffect(() => {
+    active.current = true;
+    let receivedAuthEvent = false;
+    let disposed = false;
+    const invalidateRequests = () => { ++profileRequest.current; };
+    function applySession(nextSession: Session | null) {
+      if (disposed) return;
+      const nextUserId = nextSession?.user.id ?? null;
+      if (nextUserId !== currentUserId.current) {
+        invalidateRequests();
+        currentUserId.current = nextUserId;
+        setProfile(null);
+        setLoading(Boolean(nextUserId));
+        setError(null);
+      }
+      setSession(nextSession);
+      setUser(nextSession?.user ?? null);
+      if (!nextUserId) {
+        setProfile(null);
+        setError(null);
+        setLoading(false);
+      }
+    }
+    // Keep the auth callback synchronous. Profile requests run in an effect,
+    // outside the Supabase auth lock, and only for a changed account ID.
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      receivedAuthEvent = true;
+      applySession(nextSession);
+    });
+    void supabase.auth.getSession().then(({ data, error: sessionError }) => {
+      if (disposed || receivedAuthEvent) return;
+      if (sessionError) throw sessionError;
+      applySession(data.session);
+    }).catch(() => {
+      if (disposed || receivedAuthEvent) return;
+      setError('Could not restore your session. Please reload and try again.');
+      setLoading(false);
+    });
+    return () => {
+      disposed = true;
+      active.current = false;
+      invalidateRequests();
+      listener.subscription.unsubscribe();
+    };
+  }, []);
+
+  const userId = user?.id;
+  useEffect(() => {
+    if (userId) void loadProfile(userId);
+  }, [userId, loadProfile]);
 
   async function refreshProfile() {
     if (user) await loadProfile(user.id);
@@ -136,8 +177,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const profileResult = await ensureProfile(data.user);
     if (profileResult.error) return profileResult;
 
-    await loadProfile(data.user.id);
-    return { error: null };
+    return loadProfile(data.user.id);
   }
 
   async function signUp(
@@ -188,7 +228,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (data.session) {
       const profileResult = await ensureProfile(data.user);
       if (profileResult.error) return profileResult;
-      await loadProfile(data.user.id);
+      return loadProfile(data.user.id);
     }
 
     return { error: null };
@@ -206,7 +246,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ session, user, profile, loading, signIn, signUp, resendSignupConfirmation, signOut, refreshProfile }}
+      value={{ session, user, profile, loading, error, signIn, signUp, resendSignupConfirmation, signOut, refreshProfile }}
     >
       {children}
     </AuthContext.Provider>
