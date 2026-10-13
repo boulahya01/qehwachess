@@ -178,6 +178,12 @@ export function AdminDashboard() {
           </div>
         </div>
 
+        <Link
+          to={{ name: 'discordIntegration', scope: 'official' }}
+          className="action action-link action-secondary mb-6"
+        >
+          {t('Official Discord announcements')}
+        </Link>
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
           {[

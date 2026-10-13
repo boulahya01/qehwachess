@@ -1,5 +1,9 @@
 export const calmTranslations: Record<'fr' | 'ar', Record<string, string>> = {
   fr: {
+    'Discord announcements': 'Annonces Discord',
+    'Official Discord announcements': 'Annonces Discord officielles',
+    'Allow Discord announcement when published':
+      'Autoriser une annonce Discord à la publication',
     'Qehwa Chess community': 'La communauté Qehwa Chess',
     'Find your next game, and the people to share it with.':
       'Trouvez votre prochaine partie et les personnes avec qui la partager.',
@@ -95,6 +99,10 @@ export const calmTranslations: Record<'fr' | 'ar', Record<string, string>> = {
     Player: 'Joueur',
   },
   ar: {
+    'Discord announcements': 'إعلانات Discord',
+    'Official Discord announcements': 'إعلانات المجتمع على Discord',
+    'Allow Discord announcement when published':
+      'السماح بإعلان Discord عند النشر',
     'Qehwa Chess community': 'مجتمع Qehwa Chess',
     'Find your next game, and the people to share it with.':
       'اعثر على مباراتك القادمة وعلى من يشاركك اللعب.',

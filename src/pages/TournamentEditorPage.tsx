@@ -32,6 +32,7 @@ const initial = {
   contact_phone: '',
   status: 'pending' as TournamentStatus,
   image_url: '',
+  discord_announcements_enabled: true,
 };
 function dateOnly(value: string | null) {
   return value ? value.slice(0, 10) : '';
@@ -112,7 +113,7 @@ export function TournamentEditorPage() {
       active = false;
     };
   }, [id, userId, profile?.role]);
-  function update(key: keyof typeof initial, value: string | number) {
+  function update(key: keyof typeof initial, value: string | number | boolean) {
     setForm((current) => ({ ...current, [key]: value }));
   }
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -180,7 +181,7 @@ export function TournamentEditorPage() {
       </div>
     );
   function input(
-    key: keyof typeof initial,
+    key: Exclude<keyof typeof initial, 'discord_announcements_enabled'>,
     label: string,
     type = 'text',
     required = false,
@@ -366,6 +367,17 @@ export function TournamentEditorPage() {
           </section>
           <details className="profile-disclosure">
             <summary>{t('Optional details')}</summary>
+            <label className="discord-check">
+              <input
+                type="checkbox"
+                disabled={saving}
+                checked={form.discord_announcements_enabled}
+                onChange={(e) =>
+                  update('discord_announcements_enabled', e.target.checked)
+                }
+              />
+              {t('Allow Discord announcement when published')}
+            </label>
             <div className="editor-grid">
               {input('entry_fee', 'Entry Fee (MAD)', 'number', false, {
                 min: 0,

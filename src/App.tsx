@@ -96,6 +96,11 @@ const AdminDashboard = lazy(() =>
 const ProfilePage = lazy(() =>
   import('@/pages/ProfilePage').then((m) => ({ default: m.ProfilePage }))
 );
+const DiscordIntegrationPage = lazy(() =>
+  import('@/pages/DiscordIntegrationPage').then((m) => ({
+    default: m.DiscordIntegrationPage,
+  }))
+);
 
 function AppRoutes() {
   const { route } = useRouter();
@@ -118,6 +123,8 @@ function AppRoutes() {
         return <EventMapPage />;
       case 'clubManagement':
         return <ClubManagementPage />;
+      case 'discordIntegration':
+        return <DiscordIntegrationPage key={route.scope + route.clubId} />;
       case 'messages':
         return (
           <MessagesPage playerId={route.playerId} meetupId={route.meetupId} />

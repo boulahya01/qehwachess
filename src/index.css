@@ -2336,3 +2336,93 @@ html[lang='ar'] .auth-entry-story h2 {
   padding-inline-start: 2.75rem;
   padding-inline-end: 3.5rem;
 }
+
+.discord-settings {
+  max-width: 56rem;
+  padding-block: 2rem 3rem;
+}
+.discord-settings .security-section {
+  gap: 1.5rem;
+}
+.discord-settings .security-section > div > h2 {
+  padding-inline-end: 0;
+}
+.discord-settings .auth-form {
+  min-width: 0;
+}
+.discord-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  margin-block: 1rem;
+  font-weight: 450;
+  line-height: 1.6;
+}
+.discord-check input {
+  flex: none;
+  width: 1.1rem;
+  height: 1.1rem;
+  margin-top: 0.2rem;
+  accent-color: var(--brand-500);
+}
+.discord-deliveries {
+  margin-top: 1rem;
+}
+.discord-deliveries li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  padding-block: 0.9rem;
+}
+.discord-deliveries li > div {
+  min-width: 0;
+  flex: 1 1 11rem;
+  overflow-wrap: anywhere;
+}
+.discord-deliveries small {
+  display: block;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
+.discord-deliveries .badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.discord-settings .security-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  margin-top: 1rem;
+}
+
+.discord-settings .auth-form {
+  margin-top: 0;
+}
+.discord-server-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+.discord-settings .security-section > div > button.text-link {
+  position: static;
+}
+.discord-deliveries li > div:last-child {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 0.65rem 1rem;
+}
+.discord-deliveries li > div:last-child p {
+  flex-basis: 100%;
+}
+@media (min-width: 768px) {
+  .discord-settings .security-section {
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.25fr);
+    gap: 2.5rem;
+  }
+}

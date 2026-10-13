@@ -556,7 +556,7 @@ export function ClubManagementPage() {
             </div>
 
             {selectedClub && (
-              <Card className="mb-5 flex items-center gap-3 p-4">
+              <Card className="mb-5 flex flex-wrap items-center gap-3 p-4">
                 <Building2 className="h-5 w-5 text-brand-400" />
                 <div>
                   <p className="font-semibold text-white">
@@ -567,6 +567,21 @@ export function ClubManagementPage() {
                     {selectedClub.city?.name}
                   </p>
                 </div>
+                {selectedClub.organizer_id === user?.id && (
+                  <Button
+                    variant="ghost"
+                    className="ms-auto"
+                    onClick={() =>
+                      navigate({
+                        name: 'discordIntegration',
+                        scope: 'club',
+                        clubId: selectedClub.id,
+                      })
+                    }
+                  >
+                    {t('Discord announcements')}
+                  </Button>
+                )}
               </Card>
             )}
 

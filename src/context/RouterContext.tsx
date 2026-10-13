@@ -19,6 +19,13 @@ type Route =
   | { name: 'players' }
   | { name: 'map' }
   | { name: 'clubManagement' }
+  | {
+      name: 'discordIntegration';
+      scope: 'club' | 'official';
+      clubId?: string;
+      ticket?: string;
+      error?: string;
+    }
   | { name: 'messages'; playerId?: string; meetupId?: string }
   | { name: 'clubs' }
   | { name: 'cities' }
@@ -66,6 +73,20 @@ function parseHash(): Route {
   if (parts[0] === 'players') return { name: 'players' };
   if (parts[0] === 'map') return { name: 'map' };
   if (parts[0] === 'club-management') return { name: 'clubManagement' };
+  if (
+    parts[0] === 'integrations' &&
+    parts[1] === 'discord' &&
+    ['club', 'official'].includes(parts[2])
+  ) {
+    const params = new URLSearchParams(query);
+    return {
+      name: 'discordIntegration',
+      scope: parts[2] as 'club' | 'official',
+      clubId: parts[2] === 'club' ? parts[3] : undefined,
+      ticket: params.get('ticket') || undefined,
+      error: params.get('error') || undefined,
+    };
+  }
   if (parts[0] === 'messages' && parts[1] === 'player' && parts[2])
     return { name: 'messages', playerId: parts[2] };
   if (parts[0] === 'messages' && parts[1] === 'meetup' && parts[2])
@@ -120,6 +141,12 @@ function routeToHash(route: Route): string {
       return '/map';
     case 'clubManagement':
       return '/club-management';
+    case 'discordIntegration':
+      return (
+        '/integrations/discord/' +
+        route.scope +
+        (route.clubId ? '/' + route.clubId : '')
+      );
     case 'messages':
       if (route.playerId) return `/messages/player/${route.playerId}`;
       if (route.meetupId) return `/messages/meetup/${route.meetupId}`;
