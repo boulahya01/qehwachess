@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowRight, CalendarPlus } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Link } from '@/context/RouterContext';
 import { useLanguage } from '@/context/LanguageContext';
@@ -14,16 +14,8 @@ export function OrganizingIntro() {
   const [error, setError] = useState<string | null>(null);
   return (
     <section className="v2-container organizing-intro">
-      <span className="auth-state-icon">
-        <CalendarPlus size={30} aria-hidden="true" />
-      </span>
-      <p className="auth-eyebrow">{t('Same account. More possibilities.')}</p>
-      <h1>{t('Bring people to the board.')}</h1>
-      <p>
-        {t(
-          'Organize events with the account you already use to play. Your registrations, messages, and profile stay together.'
-        )}
-      </p>
+      <h1>{t('Organize events')}</h1>
+      <p>{t('Organize events and keep playing with this account.')}</p>
       <AuthMessage message={error} />
       <button
         type="button"

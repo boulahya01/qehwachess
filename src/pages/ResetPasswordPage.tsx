@@ -102,6 +102,7 @@ export function ResetPasswordPage() {
               <label htmlFor="reset-confirm">{t('Confirm new password')}</label>
               <PasswordInput
                 id="reset-confirm"
+                match={password}
                 value={confirm}
                 onChange={setConfirm}
                 newPassword

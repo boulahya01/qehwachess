@@ -1,93 +1,34 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useRouter } from '@/context/RouterContext';
 import { useAuth } from '@/context/AuthContext';
-import { Language, useLanguage } from '@/context/LanguageContext';
-import { BrandMark } from '@/components/BrandMark';
-import { authError } from '@/lib/authFlow';
+import { useLanguage, Language } from '@/context/LanguageContext';
 import { useTheme } from '@/context/ThemeContext';
+import { BrandMark } from './BrandMark';
+import { authError } from '@/lib/authFlow';
 import {
+  ChevronDown,
   Menu,
   X,
-  ChevronDown,
-  Crown,
-  MessageCircle,
   Sun,
   Moon,
-  Trophy,
-  MapPin,
   Users,
+  MessageCircle,
   UserRound,
-  LogOut,
+  Coffee,
 } from 'lucide-react';
-
 export function Navbar() {
-  const { route } = useRouter();
+  const { route, confirmLeave } = useRouter();
   const { user, profile, signOut } = useAuth();
   const { language, chooseLanguage, t } = useLanguage();
   const { theme, toggleTheme } = useTheme();
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [moreOpen, setMoreOpen] = useState(false);
-  const [accountOpen, setAccountOpen] = useState(false);
-  const [signoutError, setSignoutError] = useState<string | null>(null);
-  const headerRef = useRef<HTMLElement>(null);
-  const menuRef = useRef<HTMLButtonElement>(null);
-  const moreRef = useRef<HTMLButtonElement>(null);
-  const accountRef = useRef<HTMLButtonElement>(null);
-
-  useEffect(() => {
-    setMobileOpen(false);
-    setMoreOpen(false);
-    setAccountOpen(false);
-  }, [route]);
-  useEffect(() => {
-    function closeOutside(event: PointerEvent) {
-      if (!headerRef.current?.contains(event.target as Node)) {
-        setMobileOpen(false);
-        setMoreOpen(false);
-        setAccountOpen(false);
-      }
-    }
-    function escape(event: KeyboardEvent) {
-      if (event.key !== 'Escape') return;
-      if (mobileOpen) menuRef.current?.focus();
-      else if (moreOpen) moreRef.current?.focus();
-      else if (accountOpen) accountRef.current?.focus();
-      setMobileOpen(false);
-      setMoreOpen(false);
-      setAccountOpen(false);
-    }
-    document.addEventListener('pointerdown', closeOutside);
-    document.addEventListener('keydown', escape);
-    return () => {
-      document.removeEventListener('pointerdown', closeOutside);
-      document.removeEventListener('keydown', escape);
-    };
-  }, [mobileOpen, moreOpen, accountOpen]);
-
-  const navLinks = [
-    {
-      label: 'Tournaments',
-      to: { name: 'tournaments' } as const,
-      icon: Trophy,
-    },
-    { label: 'Casual Meetups', to: { name: 'meetups' } as const, icon: Users },
-    { label: 'Players', to: { name: 'players' } as const, icon: UserRound },
-    { label: 'Map', to: { name: 'map' } as const, icon: MapPin },
-    { label: 'Clubs', to: { name: 'clubs' } as const, icon: Crown },
-    { label: 'Cities', to: { name: 'cities' } as const, icon: MapPin },
-  ];
-  function isActive(name: string) {
-    return (
-      route.name === name ||
-      (name === 'tournaments' && route.name === 'tournament') ||
-      (name === 'clubs' && route.name === 'club') ||
-      (name === 'cities' && route.name === 'city')
-    );
-  }
-  const accountRoute = { name: 'dashboard' } as const;
-  const themeLabel = t(
-    theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'
-  );
+  const [open, setOpen] = useState<
+    'play' | 'community' | 'account' | 'mobile' | null
+  >(null);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+  const header = useRef<HTMLElement>(null);
+  const timer = useRef<ReturnType<typeof setTimeout>>();
+  const trigger = useRef<HTMLButtonElement | null>(null);
   const authPage = [
     'signin',
     'signup',
@@ -95,13 +36,63 @@ export function Navbar() {
     'resetPassword',
     'authCallback',
   ].includes(route.name);
-  const accountLinks = (
+  useEffect(() => {
+    setOpen(null);
+  }, [route]);
+  useEffect(() => {
+    function outside(e: PointerEvent) {
+      if (!header.current?.contains(e.target as Node)) setOpen(null);
+    }
+    function escape(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        clearTimeout(timer.current);
+        setOpen(null);
+        trigger.current?.focus();
+      }
+    }
+    document.addEventListener('pointerdown', outside);
+    document.addEventListener('keydown', escape);
+    return () => {
+      clearTimeout(timer.current);
+      document.removeEventListener('pointerdown', outside);
+      document.removeEventListener('keydown', escape);
+    };
+  }, []);
+  function hover(value: typeof open, e: React.PointerEvent) {
+    if (e.pointerType !== 'mouse') return;
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => setOpen(value), value ? 180 : 250);
+  }
+  const play = (
     <>
-      <Link to={accountRoute} className="nav-link">
-        {t('Dashboard')}
+      <Link to={{ name: 'meetups' }} className="nav-link">
+        {t('Find a game')}
       </Link>
-      <Link to={{ name: 'messages' }} className="nav-link">
-        {t('Messages')}
+      <Link to={{ name: 'tournaments' }} className="nav-link">
+        {t('Tournaments')}
+      </Link>
+      <Link to={{ name: 'map' }} className="nav-link">
+        {t('Map')}
+      </Link>
+    </>
+  );
+  const community = (
+    <>
+      <Link to={{ name: 'players' }} className="nav-link">
+        {t('Players')}
+      </Link>
+      <Link to={{ name: 'clubs' }} className="nav-link">
+        {t('Clubs')}
+      </Link>
+      <Link to={{ name: 'cities' }} className="nav-link">
+        {t('Cities')}
+      </Link>
+    </>
+  );
+  const account = user ? (
+    <>
+      <Link to={{ name: 'dashboard' }} className="nav-link">
+        {t('My games')}
       </Link>
       <Link to={{ name: 'profile' }} className="nav-link">
         {t('Profile Settings')}
@@ -110,34 +101,100 @@ export function Navbar() {
         {t('Sign-in & security')}
       </Link>
       <Link to={{ name: 'organizer' }} className="nav-link">
-        {t('Organize events')}
+        {t('Organizer workspace')}
       </Link>
-      {profile?.role === 'organizer' && (
+      {['organizer', 'admin'].includes(profile?.role ?? '') && (
         <Link to={{ name: 'clubManagement' }} className="nav-link">
           {t('Manage Clubs')}
         </Link>
       )}
+      {profile?.role === 'admin' && (
+        <Link to={{ name: 'admin' }} className="nav-link">
+          {t('Administration')}
+        </Link>
+      )}
       <button
         type="button"
-        className="nav-link gap-2 w-full"
-        onClick={() => {
-          setSignoutError(null);
-          void signOut().catch((caught) => setSignoutError(authError(caught)));
-          setAccountOpen(false);
-          setMobileOpen(false);
+        className="nav-link text-danger"
+        disabled={pending}
+        onClick={async () => {
+          if (!confirmLeave()) return;
+          setPending(true);
+          setError(null);
+          try {
+            await signOut('local');
+            setOpen(null);
+          } catch (e) {
+            setError(authError(e));
+          } finally {
+            setPending(false);
+          }
         }}
       >
-        <LogOut size={16} />
-        {t('Sign Out')}
+        {t(pending ? 'Please wait...' : 'Sign out')}
       </button>
     </>
+  ) : (
+    <>
+      <Link to={{ name: 'signin' }} className="nav-link">
+        {t('Sign in')}
+      </Link>
+      <Link to={{ name: 'signup' }} className="nav-link">
+        {t('Create an account')}
+      </Link>
+    </>
   );
-
+  function dropdown(
+    name: 'play' | 'community' | 'account',
+    label: string,
+    children: React.ReactNode
+  ) {
+    return (
+      <div
+        className="relative"
+        onPointerEnter={(e) => {
+          if (e.pointerType === 'mouse')
+            trigger.current = e.currentTarget.querySelector('button');
+          hover(name, e);
+        }}
+        onPointerLeave={(e) => {
+          if (!e.currentTarget.contains(document.activeElement)) hover(null, e);
+        }}
+        onFocus={() => clearTimeout(timer.current)}
+        onBlur={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget)) {
+            clearTimeout(timer.current);
+            setOpen((current) => (current === name ? null : current));
+          }
+        }}
+      >
+        <button
+          type="button"
+          className="nav-link"
+          aria-expanded={open === name}
+          aria-controls={`nav-${name}`}
+          onClick={(e) => {
+            clearTimeout(timer.current);
+            trigger.current = e.currentTarget;
+            setOpen(open === name ? null : name);
+          }}
+        >
+          {t(label)}
+          <ChevronDown size={14} />
+        </button>
+        {open === name && (
+          <div id={`nav-${name}`} className="nav-popover">
+            {children}
+          </div>
+        )}
+      </div>
+    );
+  }
   return (
     <>
       <header
-        className={`site-header ${authPage ? 'auth-header' : ''}`}
-        ref={headerRef}
+        ref={header}
+        className={`site-header calm-header ${authPage ? 'auth-header' : ''}`}
       >
         <nav aria-label={t('Main navigation')} className="v2-container">
           <div className="nav-inner">
@@ -151,216 +208,139 @@ export function Navbar() {
               </span>
               Qehwa Chess
             </Link>
-            <div
-              className={authPage ? 'hidden' : 'hidden xl:flex items-center'}
-            >
-              {navLinks.slice(0, 4).map((link) => (
+            {!authPage && (
+              <div className="calm-desktop">
+                {dropdown('play', 'Play', play)}
+                {dropdown('community', 'Community', community)}
                 <Link
-                  key={link.label}
-                  to={link.to}
+                  to={{ name: user ? 'messages' : 'signin' }}
                   className="nav-link"
-                  aria-current={isActive(link.to.name) ? 'page' : undefined}
                 >
-                  {t(link.label)}
+                  {t('Messages')}
                 </Link>
-              ))}
-              <div className="relative">
-                <button
-                  type="button"
-                  ref={moreRef}
-                  onClick={() => {
-                    setMoreOpen(!moreOpen);
-                    setAccountOpen(false);
-                  }}
-                  className="nav-link gap-1"
-                  aria-expanded={moreOpen}
-                  aria-controls="more-navigation"
-                >
-                  {t('More')}
-                  <ChevronDown size={14} />
-                </button>
-                {moreOpen && (
-                  <div id="more-navigation" className="nav-popover">
-                    {navLinks.slice(4).map((link) => (
-                      <Link
-                        key={link.label}
-                        to={link.to}
-                        className="nav-link"
-                        aria-current={
-                          isActive(link.to.name) ? 'page' : undefined
-                        }
-                      >
-                        {t(link.label)}
-                      </Link>
-                    ))}
-                  </div>
-                )}
+                {dropdown('account', 'Account', account)}
               </div>
-            </div>
-            <div className="flex items-center gap-1 sm:gap-2">
+            )}
+            <div className="flex items-center gap-2">
               <select
-                aria-label={t('Language / Langue')}
+                aria-label="Language / Langue"
                 value={language}
                 onChange={(e) => chooseLanguage(e.target.value as Language)}
-                className="language-select"
+                className="header-language-control"
               >
                 <option value="en">EN</option>
                 <option value="fr">FR</option>
                 <option value="ar">العربية</option>
               </select>
               <button
-                type="button"
-                onClick={toggleTheme}
                 className="icon-button header-theme-control"
-                aria-label={themeLabel}
-                title={themeLabel}
+                type="button"
+                aria-label={t(
+                  theme === 'dark'
+                    ? 'Switch to light mode'
+                    : 'Switch to dark mode'
+                )}
+                onClick={toggleTheme}
               >
                 {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
               </button>
-              <div
-                className={
-                  authPage ? 'hidden' : 'hidden xl:flex items-center gap-2'
-                }
-              >
-                {user ? (
-                  <>
-                    <Link
-                      to={{ name: 'messages' }}
-                      className="icon-button"
-                      aria-label={t('Messages')}
-                    >
-                      <MessageCircle size={19} />
-                    </Link>
-                    <div className="relative">
-                      <button
-                        type="button"
-                        ref={accountRef}
-                        aria-label={t('Account menu')}
-                        aria-expanded={accountOpen}
-                        aria-controls="account-navigation"
-                        onClick={() => {
-                          setAccountOpen(!accountOpen);
-                          setMoreOpen(false);
-                        }}
-                        className="nav-link gap-2"
-                      >
-                        <span className="brand-symbol text-sm">
-                          {profile?.full_name?.charAt(0) ?? 'U'}
-                        </span>
-                        <ChevronDown size={14} />
-                      </button>
-                      {accountOpen && (
-                        <div id="account-navigation" className="nav-popover">
-                          {accountLinks}
-                        </div>
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <Link to={{ name: 'signin' }} className="nav-link">
-                      {t('Sign In')}
-                    </Link>
-                    <Link
-                      to={{ name: 'signup' }}
-                      className="action action-link action-primary text-sm"
-                    >
-                      {t('Get Started')}
-                    </Link>
-                  </>
-                )}
-              </div>
-              <button
-                type="button"
-                ref={menuRef}
-                className={authPage ? 'hidden' : 'icon-button xl:hidden'}
-                aria-label={t(mobileOpen ? 'Close menu' : 'Open menu')}
-                aria-expanded={mobileOpen}
-                aria-controls="mobile-navigation"
-                onClick={() => setMobileOpen(!mobileOpen)}
-              >
-                {mobileOpen ? <X size={22} /> : <Menu size={22} />}
-              </button>
-            </div>
-          </div>
-          {mobileOpen && (
-            <div id="mobile-navigation" className="mobile-menu xl:hidden">
-              <div className="grid grid-cols-2 gap-1">
-                {navLinks.map((link) => (
-                  <Link
-                    key={link.label}
-                    to={link.to}
-                    className="nav-link gap-2"
-                    aria-current={isActive(link.to.name) ? 'page' : undefined}
-                  >
-                    <link.icon size={16} />
-                    {t(link.label)}
-                  </Link>
-                ))}
-              </div>
-              <div className="grid gap-1 mt-3 pt-3 border-t border-surface-700">
+              {!authPage && (
                 <button
                   type="button"
-                  onClick={toggleTheme}
-                  className="nav-link menu-theme-control gap-2"
+                  className="icon-button calm-mobile-toggle"
+                  aria-label={t(open === 'mobile' ? 'Close menu' : 'Open menu')}
+                  aria-expanded={open === 'mobile'}
+                  aria-controls="mobile-navigation"
+                  onClick={(e) => {
+                    trigger.current = e.currentTarget;
+                    setOpen(open === 'mobile' ? null : 'mobile');
+                  }}
                 >
-                  {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-                  {themeLabel}
+                  {open === 'mobile' ? <X size={22} /> : <Menu size={22} />}
                 </button>
-                {user ? (
-                  accountLinks
-                ) : (
-                  <>
-                    <Link
-                      to={{ name: 'signin' }}
-                      className="action action-link action-secondary"
-                    >
-                      {t('Sign In')}
-                    </Link>
-                    <Link
-                      to={{ name: 'signup' }}
-                      className="action action-link action-primary"
-                    >
-                      {t('Get Started')}
-                    </Link>
-                  </>
+              )}
+            </div>
+          </div>
+          {open === 'mobile' && !authPage && (
+            <div id="mobile-navigation" className="mobile-menu">
+              <p className="field-hint">{t('Play')}</p>
+              {play}
+              <p className="field-hint">{t('Community')}</p>
+              {community}
+              <p className="field-hint">{t('Account')}</p>
+              {account}
+              <button
+                type="button"
+                className="nav-link menu-theme-control"
+                onClick={toggleTheme}
+              >
+                {t(
+                  theme === 'dark'
+                    ? 'Switch to light mode'
+                    : 'Switch to dark mode'
                 )}
-              </div>
+              </button>
             </div>
           )}
         </nav>
-        {signoutError && (
+        {error && (
           <p className="nav-auth-error" role="alert">
-            {t(signoutError)}
+            {t(error)}
           </p>
         )}
       </header>
       {!authPage && (
-        <nav className="mobile-dock" aria-label={t('Quick navigation')}>
-          {navLinks.slice(0, 2).map((link) => (
+        <nav
+          className="mobile-dock calm-dock"
+          aria-label={t('Quick navigation')}
+        >
+          {[
+            {
+              name: 'meetups' as const,
+              label: 'Play',
+              icon: Coffee,
+              active: ['meetups', 'tournaments', 'tournament', 'map'].includes(
+                route.name
+              ),
+            },
+            {
+              name: 'players' as const,
+              label: 'Community',
+              icon: Users,
+              active: ['players', 'clubs', 'club', 'cities', 'city'].includes(
+                route.name
+              ),
+            },
+            {
+              name: user ? ('messages' as const) : ('signin' as const),
+              label: 'Messages',
+              icon: MessageCircle,
+              active: route.name === 'messages',
+            },
+            {
+              name: user ? ('dashboard' as const) : ('signin' as const),
+              label: 'Account',
+              icon: UserRound,
+              active: [
+                'dashboard',
+                'profile',
+                'security',
+                'organizer',
+                'clubManagement',
+                'admin',
+                'tournamentEditor',
+              ].includes(route.name),
+            },
+          ].map((item) => (
             <Link
-              key={link.label}
-              to={link.to}
-              aria-current={isActive(link.to.name) ? 'page' : undefined}
+              key={item.label}
+              to={{ name: item.name }}
+              aria-current={item.active ? 'page' : undefined}
             >
-              <link.icon size={20} strokeWidth={1.7} />
-              <span>{t(link.label)}</span>
+              <item.icon size={20} strokeWidth={1.7} />
+              <span>{t(item.label)}</span>
             </Link>
           ))}
-          <Link
-            to={{ name: 'map' }}
-            aria-current={isActive('map') ? 'page' : undefined}
-          >
-            <MapPin size={20} strokeWidth={1.7} />
-            <span>{t('Map')}</span>
-          </Link>
-          <Link
-            to={user ? accountRoute : { name: 'signin' }}
-            aria-current={isActive('dashboard') ? 'page' : undefined}
-          >
-            <UserRound size={20} strokeWidth={1.7} />
-            <span>{t(user ? 'Dashboard' : 'Sign In')}</span>
-          </Link>
         </nav>
       )}
     </>

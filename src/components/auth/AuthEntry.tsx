@@ -3,6 +3,7 @@ import { Link, useRouter } from '@/context/RouterContext';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { AuthLayout } from '@/components/AuthLayout';
+import { Field } from '@/components/ui/Field';
 import { PasswordInput } from '@/components/ui/PasswordInput';
 import {
   AuthHeading,
@@ -81,7 +82,7 @@ export function AuthEntry({ mode }: { mode: 'signin' | 'signup' }) {
     }
   }
   return (
-    <AuthLayout>
+    <AuthLayout entry={!confirmation}>
       {confirmation ? (
         <InboxState
           title="Check your email"
@@ -117,17 +118,18 @@ export function AuthEntry({ mode }: { mode: 'signin' | 'signup' }) {
       ) : (
         <>
           <AuthHeading
-            eyebrow={
-              signup ? 'Your community starts here' : 'Your next game awaits'
-            }
-            title={signup ? 'Join Qehwa Chess' : 'Welcome back'}
+            title={signup ? 'Create an account' : 'Welcome back'}
             description={
               signup
-                ? 'One account to play, meet people, and organize events.'
-                : 'Your games, your people. Pick up where you left off.'
+                ? 'One account to play and organize.'
+                : 'Sign in for your next game.'
             }
           />
-          <SocialAuthButtons tournamentId={tournamentId} />
+          <SocialAuthButtons
+            tournamentId={tournamentId}
+            disabled={pending}
+            onPendingChange={setPending}
+          />
           <AuthMessage message={error} />
           {error === 'Confirm your email before signing in.' && (
             <button
@@ -144,18 +146,21 @@ export function AuthEntry({ mode }: { mode: 'signin' | 'signup' }) {
           <form onSubmit={submit} className="auth-form" aria-busy={pending}>
             <div className="auth-field">
               <label htmlFor={`${mode}-email`}>{t('Email')}</label>
-              <input
-                id={`${mode}-email`}
-                type="email"
-                autoComplete="email"
-                autoCapitalize="none"
-                spellCheck={false}
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                className="auth-input"
-              />
+              <Field>
+                <input
+                  id={`${mode}-email`}
+                  type="email"
+                  autoComplete="email"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="auth-input"
+                  dir="ltr"
+                />
+              </Field>
             </div>
             <div className="auth-field">
               <div className="auth-label-row">
@@ -172,22 +177,12 @@ export function AuthEntry({ mode }: { mode: 'signin' | 'signup' }) {
                 onChange={setPassword}
                 newPassword={signup}
               />
-              {signup && (
-                <p className="auth-field-hint">
-                  {t('Use at least 8 characters. A longer phrase works well.')}
-                </p>
-              )}
             </div>
             <AuthSubmit
               pending={pending}
               label={signup ? 'Create account' : 'Sign in'}
             />
           </form>
-          {signup && (
-            <p className="auth-footnote">
-              {t('Add your city and chess profiles whenever you want.')}
-            </p>
-          )}
           <p className="auth-switch">
             {t(signup ? 'Already have an account?' : 'New to Qehwa Chess?')}{' '}
             <Link to={{ name: signup ? 'signin' : 'signup', tournamentId }}>

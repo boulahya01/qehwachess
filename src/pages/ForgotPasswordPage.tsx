@@ -9,6 +9,7 @@ import {
   AuthSubmit,
   InboxState,
 } from '@/components/auth/AuthParts';
+import { Field } from '@/components/ui/Field';
 import { authError } from '@/lib/authFlow';
 
 export function ForgotPasswordPage() {
@@ -69,18 +70,21 @@ export function ForgotPasswordPage() {
           <form className="auth-form" onSubmit={submit} aria-busy={pending}>
             <div className="auth-field">
               <label htmlFor="recovery-email">{t('Email')}</label>
-              <input
-                id="recovery-email"
-                type="email"
-                className="auth-input"
-                autoComplete="email"
-                autoCapitalize="none"
-                spellCheck={false}
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-              />
+              <Field>
+                <input
+                  id="recovery-email"
+                  type="email"
+                  className="auth-input"
+                  autoComplete="email"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  dir="ltr"
+                />
+              </Field>
             </div>
             <AuthSubmit pending={pending} label="Send reset link" />
           </form>

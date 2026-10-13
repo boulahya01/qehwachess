@@ -9,7 +9,7 @@ export function validTournamentId(value: string | null | undefined) {
     : undefined;
 }
 export function authRedirect(
-  flow: 'signup' | 'recovery' | 'oauth' | 'email_change',
+  flow: 'signup' | 'recovery' | 'oauth' | 'link' | 'email_change',
   tournamentId?: string
 ) {
   const url = new URL('/auth/callback', window.location.origin);
@@ -31,6 +31,16 @@ export function authError(error: unknown): string {
     return 'Confirm your email before signing in.';
   if (/rate.?limit|too many|429/i.test(message))
     return 'Too many attempts. Please wait a moment and try again.';
+  if (
+    /identity.*already|already.*linked|identity_already_exists/i.test(message)
+  )
+    return 'That sign-in method belongs to another account. Use a different method or sign in to that account.';
+  if (/single_identity|last.*identity|at least.*identit/i.test(message))
+    return 'Keep a usable sign-in method before disconnecting.';
+  if (
+    /session.*missing|refresh token.*not found|not authenticated/i.test(message)
+  )
+    return 'Your session changed. Please sign in again.';
   if (/already registered|already exists/i.test(message))
     return 'Try signing in or resetting your password.';
   if (/manual.*linking.*disabled|manual_linking_disabled/i.test(message))
@@ -71,7 +81,7 @@ export function initializeAuth(
     url.searchParams.has('error') || url.searchParams.has('error_code');
   const clean = new URL('/auth/callback', url.origin);
   if (
-    ['signup', 'recovery', 'oauth', 'google', 'email_change'].includes(
+    ['signup', 'recovery', 'oauth', 'link', 'google', 'email_change'].includes(
       flow ?? ''
     )
   )
@@ -85,7 +95,7 @@ export function initializeAuth(
         return {
           session: null,
           error:
-            flow === 'oauth' || flow === 'google'
+            flow === 'oauth' || flow === 'link' || flow === 'google'
               ? 'Sign-in was not completed. Please try again.'
               : 'This link has expired or was already used. Request a new one.',
           recovery: false,

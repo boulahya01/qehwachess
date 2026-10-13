@@ -4,6 +4,8 @@ import {
   useContext,
   useEffect,
   useState,
+  useRef,
+  useCallback,
   ReactNode,
   AnchorHTMLAttributes,
 } from 'react';
@@ -30,12 +32,15 @@ type Route =
   | { name: 'security' }
   | { name: 'dashboard' }
   | { name: 'organizer' }
+  | { name: 'tournamentEditor'; id?: string }
   | { name: 'admin' }
   | { name: 'profile' };
 
 interface RouterContextValue {
   route: Route;
   navigate: (route: Route) => void;
+  registerLeaveGuard: (guard: () => boolean) => () => void;
+  confirmLeave: () => boolean;
 }
 
 const RouterContext = createContext<RouterContextValue | undefined>(undefined);
@@ -88,6 +93,11 @@ function parseHash(): Route {
     };
   if (parts[0] === 'reset-password') return { name: 'resetPassword' };
   if (parts[0] === 'security') return { name: 'security' };
+  if (parts[0] === 'organizer' && parts[1] === 'tournaments')
+    return {
+      name: 'tournamentEditor',
+      id: parts[2] === 'new' ? undefined : parts[2],
+    };
   if (parts[0] === 'organizer') return { name: 'organizer' };
   if (parts[0] === 'admin') return { name: 'admin' };
   if (parts[0] === 'profile') return { name: 'profile' };
@@ -139,6 +149,8 @@ function routeToHash(route: Route): string {
       return '/security';
     case 'organizer':
       return '/organizer';
+    case 'tournamentEditor':
+      return `/organizer/tournaments/${route.id ?? 'new'}`;
     case 'admin':
       return '/admin';
     case 'profile':
@@ -148,9 +160,32 @@ function routeToHash(route: Route): string {
 
 export function RouterProvider({ children }: { children: ReactNode }) {
   const [route, setRoute] = useState<Route>(parseHash);
+  const guards = useRef(new Set<() => boolean>());
+  const currentHash = useRef(window.location.hash);
+  const reverting = useRef(false);
+  const confirmLeave = useCallback(
+    () => [...guards.current].every((guard) => guard()),
+    []
+  );
+  const registerLeaveGuard = useCallback((guard: () => boolean) => {
+    guards.current.add(guard);
+    return () => {
+      guards.current.delete(guard);
+    };
+  }, []);
 
   useEffect(() => {
     const handler = () => {
+      if (reverting.current) {
+        reverting.current = false;
+        return;
+      }
+      if ([...guards.current].some((guard) => !guard())) {
+        reverting.current = true;
+        window.location.hash = currentHash.current;
+        return;
+      }
+      currentHash.current = window.location.hash;
       setRoute(parseHash());
       window.scrollTo(0, 0);
     };
@@ -158,18 +193,31 @@ export function RouterProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener('hashchange', handler);
   }, []);
 
-  function navigate(newRoute: Route) {
+  const navigate = useCallback((newRoute: Route) => {
+    if (
+      window.location.pathname !== '/auth/callback' &&
+      window.location.hash === `#${routeToHash(newRoute)}`
+    )
+      return;
+    if ([...guards.current].some((guard) => !guard())) return;
     if (window.location.pathname === '/auth/callback') {
       window.history.replaceState(null, '', `/#${routeToHash(newRoute)}`);
       setRoute(newRoute);
       window.scrollTo(0, 0);
       return;
     }
+    currentHash.current = `#${routeToHash(newRoute)}`;
+    // This transition has already passed the guard; do not ask a second time.
+    if (window.location.hash !== currentHash.current) reverting.current = true;
     window.location.hash = routeToHash(newRoute);
-  }
+    setRoute(newRoute);
+    window.scrollTo?.(0, 0);
+  }, []);
 
   return (
-    <RouterContext.Provider value={{ route, navigate }}>
+    <RouterContext.Provider
+      value={{ route, navigate, registerLeaveGuard, confirmLeave }}
+    >
       {children}
     </RouterContext.Provider>
   );

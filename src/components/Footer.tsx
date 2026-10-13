@@ -28,7 +28,11 @@ export function Footer() {
         </div>
         <div className="footer-bottom">
           <p>© {new Date().getFullYear()} Qehwa Chess</p>
-          <p>{t('Find your people. Play over the board.')}</p>
+          <p>
+            <a href="/privacy/">{t('Privacy')}</a> ·{' '}
+            <a href="/terms/">{t('Terms')}</a> ·{' '}
+            <a href="/brand/">{t('Brand')}</a>
+          </p>
         </div>
       </div>
     </footer>

@@ -3,35 +3,50 @@ import { beforeEach, afterEach, expect, it, vi } from 'vitest';
 import { RouterProvider } from '@/context/RouterContext';
 import { ProfilePage } from '@/pages/ProfilePage';
 
-const { eq, refreshProfile, profile } = vi.hoisted(() => ({
+const { eq, refreshProfile, profileState } = vi.hoisted(() => ({
   eq: vi.fn(),
   refreshProfile: vi.fn(),
-  profile: {
-    id: 'test-player',
-    full_name: 'Chess player',
-    email: 'player@example.com',
-    role: 'player',
+  profileState: {
+    value: {
+      id: 'test-player',
+      full_name: 'Chess player',
+      role: 'player',
+      avatar_url: null as string | null,
+    },
   },
 }));
 vi.mock('@/lib/supabase', () => ({
-  supabase: { from: () => ({ update: () => ({ eq }) }) },
+  supabase: {
+    rpc: eq,
+    from: () => ({
+      select: () => ({
+        eq: () => ({
+          single: async () => ({ data: { phone: null }, error: null }),
+        }),
+      }),
+    }),
+  },
 }));
 vi.mock('@/context/AuthContext', () => ({
-  useAuth: () => ({ user: { id: 'test-player' }, profile, refreshProfile }),
+  useAuth: () => ({
+    user: { id: 'test-player' },
+    profile: profileState.value,
+    refreshProfile,
+  }),
 }));
 vi.mock('@/hooks/useData', () => ({ useCities: () => ({ cities: [] }) }));
 vi.mock('@/context/LanguageContext', () => ({
   useLanguage: () => ({ t: (text: string) => text }),
 }));
 let renderer: ReactTestRenderer;
-beforeEach(() => {
+beforeEach(async () => {
   vi.clearAllMocks();
   vi.stubGlobal('window', {
     location: { pathname: '/', hash: '#/profile' },
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
   });
-  act(() => {
+  await act(async () => {
     renderer = create(
       <RouterProvider>
         <ProfilePage />
@@ -59,7 +74,7 @@ it('keeps account credentials out of the optional public-profile editor', () => 
     true
   );
   expect(JSON.stringify(renderer.toJSON())).toContain(
-    'Optional - visible to other users'
+    'Optional - only you can see this'
   );
 });
 it('preserves edited details and re-enables saving after a rejected request', async () => {
@@ -80,4 +95,29 @@ it('preserves edited details and re-enables saving after a rejected request', as
   );
   expect(JSON.stringify(renderer.toJSON())).toContain('Check your connection');
   expect(refreshProfile).not.toHaveBeenCalled();
+});
+
+it('preserves a public-profile draft when an avatar or session refresh replaces the profile object', async () => {
+  act(() =>
+    renderer.root
+      .findByProps({ id: 'profile-name' })
+      .props.onChange({ target: { value: 'Unfinished name' } })
+  );
+  profileState.value = {
+    ...profileState.value,
+    avatar_url: 'https://example.com/avatar.png',
+  };
+  await act(async () =>
+    renderer.update(
+      <RouterProvider>
+        <ProfilePage />
+      </RouterProvider>
+    )
+  );
+  expect(renderer.root.findByProps({ id: 'profile-name' }).props.value).toBe(
+    'Unfinished name'
+  );
+  expect(JSON.stringify(renderer.toJSON())).toContain(
+    'You have unsaved changes.'
+  );
 });

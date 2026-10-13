@@ -1,6 +1,11 @@
 export type UserRole = 'player' | 'organizer' | 'admin';
 
-export type TournamentStatus = 'draft' | 'pending' | 'published' | 'cancelled' | 'completed';
+export type TournamentStatus =
+  | 'draft'
+  | 'pending'
+  | 'published'
+  | 'cancelled'
+  | 'completed';
 
 export type TournamentFormat =
   | 'swiss'
@@ -11,7 +16,11 @@ export type TournamentFormat =
   | 'classical'
   | 'simultaneous';
 
-export type RegistrationStatus = 'pending' | 'confirmed' | 'waitlisted' | 'cancelled';
+export type RegistrationStatus =
+  | 'pending'
+  | 'confirmed'
+  | 'waitlisted'
+  | 'cancelled';
 
 export interface City {
   id: string;
@@ -25,10 +34,8 @@ export interface City {
 export interface Profile {
   id: string;
   full_name: string;
-  email: string;
   role: UserRole;
   city_id: string | null;
-  phone: string | null;
   bio: string | null;
   avatar_url: string | null;
   username: string | null;
@@ -118,7 +125,10 @@ export interface CasualMeetup {
   status: 'published' | 'cancelled';
   created_at: string;
   city?: City | null;
-  creator?: Pick<Profile, 'id' | 'full_name' | 'avatar_url' | 'username'> | null;
+  creator?: Pick<
+    Profile,
+    'id' | 'full_name' | 'avatar_url' | 'username'
+  > | null;
 }
 
 export interface CommunityMessage {
@@ -141,7 +151,10 @@ export interface ClubMembership {
   profile_id: string;
   status: ClubMembershipStatus;
   joined_at: string;
-  profile?: Pick<Profile, 'id' | 'full_name' | 'email' | 'avatar_url' | 'username'> | null;
+  profile?: Pick<
+    Profile,
+    'id' | 'full_name' | 'avatar_url' | 'username'
+  > | null;
 }
 
 export interface TournamentWithRelations extends Tournament {

@@ -1,3 +1,4 @@
+import { Field } from '@/components/ui/Field';
 import { useState, useMemo } from 'react';
 import { useTournaments, useCities } from '@/hooks/useData';
 import { TournamentCard } from '@/components/TournamentCard';
@@ -60,14 +61,16 @@ export function TournamentsPage() {
             className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500"
             aria-hidden="true"
           />
-          <input
-            id="tournament-search"
-            type="search"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={t('Search by name, venue, or description...')}
-            className="w-full pl-12 pr-4 py-3 bg-transparent rounded-xl text-white"
-          />
+          <Field>
+            <input
+              id="tournament-search"
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={t('Search by name, venue, or description...')}
+              className="w-full pl-12 pr-4 py-3 bg-transparent rounded-xl text-white"
+            />
+          </Field>
         </div>
         <button
           type="button"
@@ -79,7 +82,9 @@ export function TournamentsPage() {
         >
           <SlidersHorizontal size={17} />
           <span className="hidden sm:inline">{t('Filters')}</span>
-          {activeFilterCount > 0 && <span className="font-semibold">{activeFilterCount}</span>}
+          {activeFilterCount > 0 && (
+            <span className="font-semibold">{activeFilterCount}</span>
+          )}
         </button>
       </div>
       {showFilters && (
@@ -92,19 +97,21 @@ export function TournamentsPage() {
               >
                 {t('City')}
               </label>
-              <select
-                id="tournament-city"
-                value={cityId}
-                onChange={(e) => setCityId(e.target.value)}
-                className="w-full px-3 py-3 bg-surface-800 border border-surface-700 rounded-xl"
-              >
-                <option value="">{t('All cities')}</option>
-                {cities.map((city) => (
-                  <option key={city.id} value={city.id}>
-                    {city.name}
-                  </option>
-                ))}
-              </select>
+              <Field>
+                <select
+                  id="tournament-city"
+                  value={cityId}
+                  onChange={(e) => setCityId(e.target.value)}
+                  className="w-full px-3 py-3 bg-surface-800 border border-surface-700 rounded-xl"
+                >
+                  <option value="">{t('All cities')}</option>
+                  {cities.map((city) => (
+                    <option key={city.id} value={city.id}>
+                      {city.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
             </div>
             <div>
               <label
@@ -113,25 +120,31 @@ export function TournamentsPage() {
               >
                 {t('Format')}
               </label>
-              <select
-                id="tournament-format"
-                value={format}
-                onChange={(e) => setFormat(e.target.value)}
-                className="w-full px-3 py-3 bg-surface-800 border border-surface-700 rounded-xl"
-              >
-                <option value="">{t('All formats')}</option>
-                {formats.map((item) => (
-                  <option key={item.value} value={item.value}>
-                    {t(item.label)}
-                  </option>
-                ))}
-              </select>
+              <Field>
+                <select
+                  id="tournament-format"
+                  value={format}
+                  onChange={(e) => setFormat(e.target.value)}
+                  className="w-full px-3 py-3 bg-surface-800 border border-surface-700 rounded-xl"
+                >
+                  <option value="">{t('All formats')}</option>
+                  {formats.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {t(item.label)}
+                    </option>
+                  ))}
+                </select>
+              </Field>
             </div>
           </div>
         </div>
       )}
       {(search || activeFilterCount > 0) && (
-        <button type="button" onClick={clearFilters} className="text-link mb-4 text-sm">
+        <button
+          type="button"
+          onClick={clearFilters}
+          className="text-link mb-4 text-sm"
+        >
           <X size={16} />
           {t('Clear all filters')}
         </button>
@@ -144,7 +157,9 @@ export function TournamentsPage() {
         <EmptyState
           icon={<Trophy size={36} />}
           title={t('No tournaments found')}
-          description={t('Try adjusting your search or filters to find tournaments.')}
+          description={t(
+            'Try adjusting your search or filters to find tournaments.'
+          )}
           action={
             search || activeFilterCount > 0 ? (
               <button
@@ -160,7 +175,8 @@ export function TournamentsPage() {
       ) : (
         <>
           <p role="status" className="text-sm text-gray-500 mb-5">
-            {t('Results')}: <strong className="font-medium">{tournaments.length}</strong>
+            {t('Results')}:{' '}
+            <strong className="font-medium">{tournaments.length}</strong>
           </p>
           <div className="event-grid">
             {tournaments.map((event) => (

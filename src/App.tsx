@@ -1,3 +1,4 @@
+import { SectionNavigation } from '@/components/SectionNavigation';
 import { lazy, Suspense } from 'react';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { RouterProvider, useRouter } from '@/context/RouterContext';
@@ -7,7 +8,9 @@ import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { ErrorState, PageLoader } from '@/components/ui/Feedback';
 import { PageErrorBoundary } from '@/components/PageErrorBoundary';
-import { HomePage } from '@/pages/HomePage';
+const HomePage = lazy(() =>
+  import('@/pages/HomePage').then((module) => ({ default: module.HomePage }))
+);
 
 const TournamentsPage = lazy(() =>
   import('@/pages/TournamentsPage').then((m) => ({
@@ -77,6 +80,11 @@ const PlayerDashboard = lazy(() =>
     default: m.PlayerDashboard,
   }))
 );
+const TournamentEditorPage = lazy(() =>
+  import('@/pages/TournamentEditorPage').then((module) => ({
+    default: module.TournamentEditorPage,
+  }))
+);
 const OrganizerDashboard = lazy(() =>
   import('@/pages/OrganizerDashboard').then((m) => ({
     default: m.OrganizerDashboard,
@@ -137,6 +145,8 @@ function AppRoutes() {
         return <AuthCallbackPage />;
       case 'security':
         return <SecurityPage />;
+      case 'tournamentEditor':
+        return <TournamentEditorPage />;
       case 'organizer':
         return <OrganizerDashboard />;
       case 'admin':
@@ -169,7 +179,12 @@ function AppRoutes() {
       >
         {t('Skip to content')}
       </a>
-      <main id="main-content" tabIndex={-1} className="flex-1">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className={`flex-1 ${isAuthPage ? '' : 'page-surface'} route-${route.name}`}
+      >
+        <SectionNavigation />
         <PageErrorBoundary
           key={`${route.name}:${'id' in route ? route.id : ''}`}
           message={t(

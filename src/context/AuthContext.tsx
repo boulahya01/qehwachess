@@ -48,7 +48,7 @@ interface AuthContextValue {
   ) => Promise<{ error: string | null }>;
   recoveryReady: boolean;
   finishRecovery: () => void;
-  signOut: () => Promise<void>;
+  signOut: (scope?: 'local' | 'global') => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
 
@@ -269,7 +269,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return Promise.resolve({
         error: 'This sign-in method is not available yet.',
       });
-    const options = { redirectTo: authRedirect('oauth', tournamentId) };
+    const options = {
+      redirectTo: authRedirect(link ? 'link' : 'oauth', tournamentId),
+    };
     return attempt(() =>
       link
         ? supabase.auth.linkIdentity({ provider, options })
@@ -281,8 +283,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setRecoveryUserId(null);
   }
 
-  async function signOut() {
-    const { error: signoutError } = await supabase.auth.signOut();
+  async function signOut(scope: 'local' | 'global' = 'local') {
+    const { error: signoutError } = await supabase.auth.signOut({ scope });
     if (signoutError) throw new Error(authError(signoutError));
     finishRecovery();
     setProfile(null);

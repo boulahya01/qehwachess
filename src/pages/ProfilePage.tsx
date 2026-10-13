@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useRouter } from '@/context/RouterContext';
 import { useAuth } from '@/context/AuthContext';
 import { useCities } from '@/hooks/useData';
@@ -7,6 +7,8 @@ import { authError } from '@/lib/authFlow';
 import { AuthMessage } from '@/components/auth/AuthParts';
 import { Button } from '@/components/ui/Button';
 
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
+import { Field } from '@/components/ui/Field';
 import { PageLoader } from '@/components/ui/Feedback';
 import { ArrowRight, Save, ImageUp, ChevronDown } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
@@ -16,27 +18,34 @@ export function ProfilePage() {
   const { user, profile, refreshProfile } = useAuth();
   const { navigate } = useRouter();
   const { cities } = useCities();
-  const [fullName, setFullName] = useState(profile?.full_name ?? '');
-  const [phone, setPhone] = useState(profile?.phone ?? '');
-  const [bio, setBio] = useState(profile?.bio ?? '');
-  const [cityId, setCityId] = useState(profile?.city_id ?? '');
-  const [username, setUsername] = useState(profile?.username ?? '');
+  const userId = user?.id;
+  const initializedProfile = useRef<string>();
+  const [savedDetails, setSavedDetails] = useState(profile);
+  const [fullName, setFullName] = useState(savedDetails?.full_name ?? '');
+  const [phone, setPhone] = useState('');
+  const [savedPhone, setSavedPhone] = useState('');
+  const [contactsReady, setContactsReady] = useState(false);
+  const [contactError, setContactError] = useState(false);
+  const [bio, setBio] = useState(savedDetails?.bio ?? '');
+  const [cityId, setCityId] = useState(savedDetails?.city_id ?? '');
+  const [username, setUsername] = useState(savedDetails?.username ?? '');
   const [lichessUsername, setLichessUsername] = useState(
     profile?.lichess_username ?? ''
   );
   const [chesscomUsername, setChesscomUsername] = useState(
     profile?.chesscom_username ?? ''
   );
-  const [fideId, setFideId] = useState(profile?.fide_id ?? '');
+  const [fideId, setFideId] = useState(savedDetails?.fide_id ?? '');
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    if (profile) {
+    if (profile && initializedProfile.current !== profile.id) {
+      initializedProfile.current = profile.id;
+      setSavedDetails(profile);
       setFullName(profile.full_name ?? '');
-      setPhone(profile.phone ?? '');
       setBio(profile.bio ?? '');
       setCityId(profile.city_id ?? '');
       setUsername(profile.username ?? '');
@@ -45,6 +54,46 @@ export function ProfilePage() {
       setFideId(profile.fide_id ?? '');
     }
   }, [profile]);
+
+  useEffect(() => {
+    let active = true;
+    setContactsReady(false);
+    setContactError(false);
+    if (userId)
+      void (async () => {
+        try {
+          const { data, error } = await supabase
+            .from('profile_contacts')
+            .select('phone')
+            .eq('profile_id', userId)
+            .single();
+          if (!active) return;
+          if (error) setContactError(true);
+          else {
+            setPhone(data.phone ?? '');
+            setSavedPhone(data.phone ?? '');
+            setContactsReady(true);
+          }
+        } catch {
+          if (active) setContactError(true);
+        }
+      })();
+    return () => {
+      active = false;
+    };
+  }, [userId]);
+
+  const dirty =
+    Boolean(profile) &&
+    (fullName !== (savedDetails?.full_name ?? '') ||
+      phone !== savedPhone ||
+      bio !== (savedDetails?.bio ?? '') ||
+      cityId !== (savedDetails?.city_id ?? '') ||
+      username !== (savedDetails?.username ?? '') ||
+      lichessUsername !== (savedDetails?.lichess_username ?? '') ||
+      chesscomUsername !== (savedDetails?.chesscom_username ?? '') ||
+      fideId !== (savedDetails?.fide_id ?? ''));
+  useUnsavedChanges(dirty);
 
   useEffect(() => {
     if (!user) navigate({ name: 'signin' });
@@ -66,21 +115,31 @@ export function ProfilePage() {
     setSuccess(false);
 
     try {
-      const { error: saveError } = await supabase
-        .from('profiles')
-        .update({
-          full_name: fullName.trim() || 'Chess player',
-          phone: phone.trim() || null,
-          bio: bio.trim() || null,
+      const { error: saveError } = await supabase.rpc('save_my_profile', {
+        p_details: {
+          full_name: fullName.trim(),
+          phone: phone.trim(),
+          bio: bio.trim(),
           city_id: cityId || null,
-          username: username.trim().replace(/^@/, '') || null,
-          lichess_username: lichessUsername.trim().replace(/^@/, '') || null,
-          chesscom_username: chesscomUsername.trim().replace(/^@/, '') || null,
-          fide_id: fideId.trim() || null,
-        })
-        .eq('id', user!.id);
+          username: username.trim().replace(/^@/, ''),
+          lichess_username: lichessUsername.trim().replace(/^@/, ''),
+          chesscom_username: chesscomUsername.trim().replace(/^@/, ''),
+          fide_id: fideId.trim(),
+        },
+      });
       if (saveError) setError(saveError.message);
       else {
+        setSavedPhone(phone);
+        setSavedDetails({
+          ...profile!,
+          full_name: fullName,
+          bio,
+          city_id: cityId || null,
+          username,
+          lichess_username: lichessUsername,
+          chesscom_username: chesscomUsername,
+          fide_id: fideId,
+        });
         await refreshProfile();
         setSuccess(true);
       }
@@ -145,20 +204,11 @@ export function ProfilePage() {
     }
   }
 
-  const dirty =
-    fullName !== (profile.full_name ?? '') ||
-    phone !== (profile.phone ?? '') ||
-    bio !== (profile.bio ?? '') ||
-    cityId !== (profile.city_id ?? '') ||
-    username !== (profile.username ?? '') ||
-    lichessUsername !== (profile.lichess_username ?? '') ||
-    chesscomUsername !== (profile.chesscom_username ?? '') ||
-    fideId !== (profile.fide_id ?? '');
   return (
     <div className="v2-container account-profile">
       <header className="security-heading">
         <p className="auth-eyebrow">{t('Account settings')}</p>
-        <h1>{t('Make it yours.')}</h1>
+        <h1>{t('Profile Settings')}</h1>
         <p>{t('Every detail here is optional. Add what helps you connect.')}</p>
         <Link to={{ name: 'security' }} className="text-link">
           {t('Sign-in & security')}
@@ -198,7 +248,13 @@ export function ProfilePage() {
           </p>
         </div>
       </section>
-      <AuthMessage message={error} />
+      <AuthMessage
+        message={
+          contactError
+            ? 'Could not load private settings. Please reload and try again.'
+            : error
+        }
+      />
       <AuthMessage
         success
         message={success && !dirty ? 'Profile updated successfully!' : null}
@@ -212,59 +268,68 @@ export function ProfilePage() {
           <div className="profile-fields">
             <div className="auth-field">
               <label htmlFor="profile-name">{t('Display name')}</label>
-              <input
-                id="profile-name"
-                className="auth-input"
-                maxLength={100}
-                autoComplete="nickname"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-              />
+              <Field>
+                <input
+                  id="profile-name"
+                  className="auth-input"
+                  maxLength={100}
+                  autoComplete="nickname"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                />
+              </Field>
             </div>
             <div className="auth-field">
               <label htmlFor="profile-username">{t('Player username')}</label>
-              <input
-                id="profile-username"
-                className="auth-input"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                maxLength={24}
-                pattern="[a-zA-Z0-9_]{3,24}"
-                aria-describedby="username-hint"
-                autoCapitalize="none"
-                spellCheck={false}
-              />
+              <Field>
+                <input
+                  id="profile-username"
+                  dir="ltr"
+                  className="auth-input"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  maxLength={24}
+                  pattern="[a-zA-Z0-9_]{3,24}"
+                  aria-describedby="username-hint"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                />
+              </Field>
               <p id="username-hint" className="auth-field-hint">
                 {t('3–24 letters, numbers, or underscores')}
               </p>
             </div>
             <div className="auth-field profile-field-wide">
               <label htmlFor="profile-city">{t('City')}</label>
-              <select
-                id="profile-city"
-                className="auth-input"
-                value={cityId}
-                onChange={(e) => setCityId(e.target.value)}
-              >
-                <option value="">{t('Select city')}</option>
-                {cities.map((city) => (
-                  <option key={city.id} value={city.id}>
-                    {city.name}
-                  </option>
-                ))}
-              </select>
+              <Field>
+                <select
+                  id="profile-city"
+                  className="auth-input"
+                  value={cityId}
+                  onChange={(e) => setCityId(e.target.value)}
+                >
+                  <option value="">{t('Select city')}</option>
+                  {cities.map((city) => (
+                    <option key={city.id} value={city.id}>
+                      {city.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
             </div>
             <div className="auth-field profile-field-wide">
               <label htmlFor="profile-bio">{t('Bio')}</label>
-              <textarea
-                id="profile-bio"
-                className="auth-input"
-                rows={3}
-                maxLength={1000}
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
-                placeholder={t('Tell the community about yourself...')}
-              />
+              <Field>
+                <textarea
+                  id="profile-bio"
+                  className="auth-input"
+                  rows={3}
+                  maxLength={1000}
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  placeholder={t('Tell the community about yourself...')}
+                />
+              </Field>
             </div>
           </div>
         </section>
@@ -284,59 +349,70 @@ export function ProfilePage() {
           <div className="profile-fields">
             <div className="auth-field">
               <label htmlFor="profile-lichess">Lichess</label>
-              <input
-                id="profile-lichess"
-                className="auth-input"
-                maxLength={50}
-                value={lichessUsername}
-                onChange={(e) => setLichessUsername(e.target.value)}
-                autoCapitalize="none"
-                spellCheck={false}
-              />
+              <Field>
+                <input
+                  id="profile-lichess"
+                  dir="ltr"
+                  className="auth-input"
+                  maxLength={50}
+                  value={lichessUsername}
+                  onChange={(e) => setLichessUsername(e.target.value)}
+                  autoCapitalize="none"
+                  spellCheck={false}
+                />
+              </Field>
             </div>
             <div className="auth-field">
               <label htmlFor="profile-chesscom">Chess.com</label>
-              <input
-                id="profile-chesscom"
-                className="auth-input"
-                maxLength={50}
-                value={chesscomUsername}
-                onChange={(e) => setChesscomUsername(e.target.value)}
-                autoCapitalize="none"
-                spellCheck={false}
-              />
+              <Field>
+                <input
+                  id="profile-chesscom"
+                  dir="ltr"
+                  className="auth-input"
+                  maxLength={50}
+                  value={chesscomUsername}
+                  onChange={(e) => setChesscomUsername(e.target.value)}
+                  autoCapitalize="none"
+                  spellCheck={false}
+                />
+              </Field>
             </div>
             <div className="auth-field">
               <label htmlFor="profile-fide">{t('FIDE ID')}</label>
-              <input
-                id="profile-fide"
-                className="auth-input"
-                maxLength={20}
-                value={fideId}
-                onChange={(e) => setFideId(e.target.value)}
-              />
+              <Field>
+                <input
+                  id="profile-fide"
+                  dir="ltr"
+                  className="auth-input"
+                  maxLength={20}
+                  value={fideId}
+                  onChange={(e) => setFideId(e.target.value)}
+                />
+              </Field>
             </div>
           </div>
         </details>
         <details className="profile-disclosure">
           <summary>
             <span>
-              {t('Public contact number')}
-              <small>{t('Optional - visible to other users')}</small>
+              {t('Private contact number')}
+              <small>{t('Optional - only you can see this')}</small>
             </span>
             <ChevronDown size={20} />
           </summary>
           <div className="auth-field">
             <label htmlFor="profile-phone">{t('Phone')}</label>
-            <input
-              id="profile-phone"
-              className="auth-input"
-              type="tel"
-              autoComplete="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="+212 ..."
-            />
+            <Field>
+              <input
+                id="profile-phone"
+                className="auth-input"
+                type="tel"
+                autoComplete="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+212 ..."
+              />
+            </Field>
           </div>
         </details>
         <div className="profile-save-bar">
@@ -349,7 +425,10 @@ export function ProfilePage() {
                   : 'Add only what you want to share.'
             )}
           </p>
-          <Button type="submit" disabled={saving || uploadingAvatar || !dirty}>
+          <Button
+            type="submit"
+            disabled={saving || uploadingAvatar || !dirty || !contactsReady}
+          >
             <Save size={17} />
             {t(saving ? 'Saving...' : 'Save Changes')}
           </Button>

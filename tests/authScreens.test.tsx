@@ -7,7 +7,12 @@ import { SecurityPage } from '@/pages/SecurityPage';
 import { SocialAuthButtons } from '@/components/auth/AuthParts';
 import { AuthCallbackPage } from '@/pages/AuthCallbackPage';
 
-const { auth } = vi.hoisted(() => ({
+const { auth, capabilities } = vi.hoisted(() => ({
+  capabilities: {
+    hasPassword: true as boolean | null,
+    error: false,
+    refresh: vi.fn(),
+  },
   auth: {
     user: null as null | {
       id: string;
@@ -25,6 +30,9 @@ const { auth } = vi.hoisted(() => ({
     signOut: vi.fn(),
   },
 }));
+vi.mock('@/hooks/useAuthCapabilities', () => ({
+  useAuthCapabilities: () => capabilities,
+}));
 vi.mock('@/context/AuthContext', () => ({ useAuth: () => auth }));
 vi.mock('@/context/LanguageContext', () => ({
   useLanguage: () => ({ t: (text: string) => text }),
@@ -32,6 +40,8 @@ vi.mock('@/context/LanguageContext', () => ({
 let renderer: ReactTestRenderer | undefined;
 beforeEach(() => {
   vi.clearAllMocks();
+  capabilities.hasPassword = true;
+  capabilities.error = false;
   auth.user = null;
   auth.recoveryReady = false;
   auth.error = null;
@@ -107,11 +117,19 @@ it('requires a recovery session before offering a new password form', () => {
 });
 
 it('does not promise confirmation emails when the backend can confirm email changes immediately', async () => {
-  signedIn(); auth.updateEmail.mockResolvedValue({ error: null }); mount(<SecurityPage />);
-  const change = renderer!.root.findAllByType('button').find(button => button.children.includes('Change email'))!;
-  act(() => change.props.onClick()); fill('change-email', 'new@example.com'); await submit();
+  signedIn();
+  auth.updateEmail.mockResolvedValue({ error: null });
+  mount(<SecurityPage />);
+  const change = renderer!.root
+    .findAllByType('button')
+    .find((button) => button.children.includes('Change email'))!;
+  act(() => change.props.onClick());
+  fill('change-email', 'new@example.com');
+  await submit();
   expect(text()).toContain('Email change requested.');
-  expect(text()).not.toContain('Your current address stays active until confirmation.');
+  expect(text()).not.toContain(
+    'Your current address stays active until confirmation.'
+  );
 });
 it('rejects mismatched recovery passwords without changing credentials', async () => {
   signedIn();
@@ -174,4 +192,51 @@ it('handles the first confirmation of a secure email change without showing an i
   mount(<AuthCallbackPage />);
   expect(text()).toContain('Check your other inbox');
   expect(text()).not.toContain('This link could not be used');
+});
+
+it('keeps the final usable provider connected even with an email identity', () => {
+  signedIn();
+  auth.user!.identities.push({ provider: 'google' });
+  capabilities.hasPassword = false;
+  mount(<SecurityPage />);
+  expect(text()).toContain('No password added');
+  const disconnect = renderer!.root
+    .findAllByType('button')
+    .find((button) => button.children.includes('Disconnect'))!;
+  expect(disconnect.props.disabled).toBe(true);
+  expect(text()).toContain('Add another sign-in method before disconnecting.');
+});
+it('locks credential actions while capability information is unavailable and offers retry', () => {
+  signedIn();
+  capabilities.hasPassword = null;
+  capabilities.error = true;
+  mount(<SecurityPage />);
+  const retry = renderer!.root
+    .findAllByType('button')
+    .find((button) => button.children.includes('Retry'))!;
+  act(() => retry.props.onClick());
+  expect(capabilities.refresh).toHaveBeenCalledOnce();
+  expect(text()).toContain('Could not load security settings.');
+});
+it('requires confirmation before signing out every session', async () => {
+  signedIn();
+  auth.signOut.mockResolvedValue(undefined);
+  mount(<SecurityPage />);
+  const allSessions = renderer!.root
+    .findAllByType('button')
+    .find((button) => button.children.includes('Sign out everywhere'))!;
+  act(() => allSessions.props.onClick({ currentTarget: null }));
+  expect(auth.signOut).not.toHaveBeenCalled();
+  expect(text()).toContain('current access tokens expire');
+  const confirm = renderer!.root
+    .findAllByType('button')
+    .find((button) => button.children.includes('Confirm'))!;
+  window.location.hash = '#/security';
+  vi.stubGlobal('window', {
+    ...window,
+    scrollTo: vi.fn(),
+    history: { replaceState: vi.fn() },
+  });
+  await act(async () => confirm.props.onClick());
+  expect(auth.signOut).toHaveBeenCalledWith('global');
 });

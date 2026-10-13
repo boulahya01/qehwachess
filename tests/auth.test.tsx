@@ -3,18 +3,31 @@ import { act, create, ReactTestRenderer } from 'react-test-renderer';
 import type { Session, AuthChangeEvent } from '@supabase/supabase-js';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 
-const { getSession, onAuthStateChange, from, signInWithOAuth, linkIdentity } =
-  vi.hoisted(() => ({
-    getSession: vi.fn(),
-    onAuthStateChange: vi.fn(),
-    from: vi.fn(),
-    signInWithOAuth: vi.fn(),
-    linkIdentity: vi.fn(),
-  }));
+const {
+  getSession,
+  onAuthStateChange,
+  from,
+  signInWithOAuth,
+  linkIdentity,
+  sdkSignOut,
+} = vi.hoisted(() => ({
+  getSession: vi.fn(),
+  onAuthStateChange: vi.fn(),
+  from: vi.fn(),
+  signInWithOAuth: vi.fn(),
+  linkIdentity: vi.fn(),
+  sdkSignOut: vi.fn(),
+}));
 vi.mock('@/lib/supabase', () => ({
   supabase: {
     from,
-    auth: { getSession, onAuthStateChange, signInWithOAuth, linkIdentity },
+    auth: {
+      getSession,
+      onAuthStateChange,
+      signInWithOAuth,
+      linkIdentity,
+      signOut: sdkSignOut,
+    },
   },
 }));
 function deferred<T>() {
@@ -218,7 +231,33 @@ it('links a provider to the signed-in account without starting another sign-in',
   });
   expect(linkIdentity).toHaveBeenCalledWith({
     provider: 'discord',
-    options: { redirectTo: 'http://localhost/auth/callback?flow=oauth' },
+    options: { redirectTo: 'http://localhost/auth/callback?flow=link' },
   });
   expect(signInWithOAuth).not.toHaveBeenCalled();
+});
+
+it('uses browser-only sign-out by default and global scope only when requested', async () => {
+  getSession.mockResolvedValue({
+    data: { session: session('player-a') },
+    error: null,
+  });
+  from.mockReturnValue(
+    profileQuery(Promise.resolve({ data: { id: 'player-a' }, error: null }))
+  );
+  sdkSignOut.mockResolvedValue({ error: null });
+  await act(async () => {
+    renderer = create(
+      <AuthProvider>
+        <Probe />
+      </AuthProvider>
+    );
+  });
+  await act(async () => {
+    await state.signOut();
+  });
+  expect(sdkSignOut).toHaveBeenLastCalledWith({ scope: 'local' });
+  await act(async () => {
+    await state.signOut('global');
+  });
+  expect(sdkSignOut).toHaveBeenLastCalledWith({ scope: 'global' });
 });

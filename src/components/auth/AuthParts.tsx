@@ -7,20 +7,18 @@ import { authError } from '@/lib/authFlow';
 import { Button } from '@/components/ui/Button';
 
 export function AuthHeading({
-  eyebrow,
   title,
   description,
 }: {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
-  description: string;
+  description?: string;
 }) {
   const { t } = useLanguage();
   return (
     <header className="auth-heading">
-      <p className="auth-eyebrow">{t(eyebrow)}</p>
       <h1>{t(title)}</h1>
-      <p>{t(description)}</p>
+      {description && <p>{t(description)}</p>}
     </header>
   );
 }
@@ -51,10 +49,14 @@ export function SocialAuthButtons({
   tournamentId,
   link = false,
   exclude = [],
+  disabled = false,
+  onPendingChange,
 }: {
   tournamentId?: string;
   link?: boolean;
   exclude?: string[];
+  disabled?: boolean;
+  onPendingChange?: (pending: boolean) => void;
 }) {
   const { t } = useLanguage();
   const { signInWithProvider } = useAuth();
@@ -69,18 +71,21 @@ export function SocialAuthButtons({
   );
   if (!providers.length) return null;
   async function connect(provider: 'google' | 'discord') {
-    if (pending) return;
+    if (pending || disabled) return;
     setPending(provider);
+    onPendingChange?.(true);
     setError(null);
     try {
       const result = await signInWithProvider(provider, tournamentId, link);
       if (result.error) {
         setError(result.error);
         setPending(null);
+        onPendingChange?.(false);
       }
     } catch (caught) {
       setError(authError(caught));
       setPending(null);
+      onPendingChange?.(false);
     }
   }
   return (
@@ -91,7 +96,7 @@ export function SocialAuthButtons({
             key={provider}
             className={`action action-secondary social-button provider-${provider}`}
             type="button"
-            disabled={Boolean(pending)}
+            disabled={Boolean(pending) || disabled}
             onClick={() => void connect(provider)}
           >
             <ProviderIcon provider={provider} />

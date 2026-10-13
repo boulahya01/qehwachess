@@ -28,7 +28,7 @@ export function AuthCallbackPage() {
       </AuthLayout>
     );
   const ready = Boolean(user && !error);
-  const oauth = flow === 'oauth' || flow === 'google';
+  const oauth = flow === 'oauth' || flow === 'link' || flow === 'google';
   if (!user && !error && flow === 'email_change')
     return (
       <AuthLayout>
@@ -63,8 +63,10 @@ export function AuthCallbackPage() {
           ready
             ? recoveryReady
               ? 'Choose a new password'
-              : flow === 'email_change'
-                ? 'Email confirmation received'
+              : flow === 'email_change' || flow === 'link'
+                ? flow === 'link'
+                  ? 'Sign-in method connected'
+                  : 'Email confirmation received'
                 : 'You’re ready to play'
             : oauth
               ? 'Sign-in was not completed'
@@ -84,7 +86,7 @@ export function AuthCallbackPage() {
           to={
             recoveryReady
               ? { name: 'resetPassword' }
-              : flow === 'email_change'
+              : flow === 'email_change' || flow === 'link'
                 ? { name: 'security' }
                 : tournamentId
                   ? { name: 'tournament', id: tournamentId }
