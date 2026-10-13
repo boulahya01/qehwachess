@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.0-beta.3
+
+- Improve status badge contrast in the light theme.
+
 ## 2.0.0-beta.2
 
 - Load the small homepage directly to prevent the route skeleton and footer from moving during startup.

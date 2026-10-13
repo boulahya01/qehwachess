@@ -163,14 +163,20 @@
   html[data-theme='light'] .text-brand-400 {
     color: var(--brand-500) !important;
   }
+  html[data-theme='light'] .text-red-300,
   html[data-theme='light'] .text-error-400 {
     color: #b42332;
   }
+  html[data-theme='light'] .text-emerald-300,
   html[data-theme='light'] .text-success-400 {
     color: #196342;
   }
+  html[data-theme='light'] .text-amber-300,
   html[data-theme='light'] .text-warning-400 {
     color: #805008;
+  }
+  html[data-theme='light'] .text-blue-300 {
+    color: #1d5baa;
   }
   html .bg-brand-500.text-white {
     color: var(--on-action) !important;
