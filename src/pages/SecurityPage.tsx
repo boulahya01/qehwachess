@@ -79,7 +79,7 @@ export function SecurityPage() {
       else {
         setNotice(
           editing === 'email'
-            ? 'Check your email to confirm the change. Your current address stays active until confirmation.'
+            ? 'Email change requested. Check your inboxes for any confirmation steps.'
             : 'Password updated.'
         );
         setEditing(null);

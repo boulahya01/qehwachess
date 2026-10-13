@@ -140,8 +140,8 @@ export const authTranslations: Record<'fr' | 'ar', Record<string, string>> = {
       'Une confirmation dans vos deux boîtes mail peut être nécessaire.',
     'Send confirmation': 'Envoyer la confirmation',
     'Change email': 'Modifier l’email',
-    'Check your email to confirm the change. Your current address stays active until confirmation.':
-      'Confirmez le changement par email. Votre adresse actuelle reste active en attendant.',
+    'Email change requested. Check your inboxes for any confirmation steps.':
+      'Changement d’email demandé. Consultez vos boîtes mail pour toute confirmation nécessaire.',
     'Use a long, memorable password you do not use elsewhere.':
       'Utilisez un mot de passe long, facile à retenir et unique.',
     'Current password': 'Mot de passe actuel',
@@ -297,8 +297,8 @@ export const authTranslations: Record<'fr' | 'ar', Record<string, string>> = {
       'قد تحتاج التأكيد من بريدك القديم والجديد.',
     'Send confirmation': 'إرسال التأكيد',
     'Change email': 'تغيير البريد',
-    'Check your email to confirm the change. Your current address stays active until confirmation.':
-      'تحقق من بريدك لتأكيد التغيير. يبقى عنوانك الحالي فعالاً حتى التأكيد.',
+    'Email change requested. Check your inboxes for any confirmation steps.':
+      'تم طلب تغيير البريد. تحقق من بريدك لأي خطوات تأكيد مطلوبة.',
     'Use a long, memorable password you do not use elsewhere.':
       'استخدم كلمة مرور طويلة تتذكرها ولا تستخدمها في موقع آخر.',
     'Current password': 'كلمة المرور الحالية',

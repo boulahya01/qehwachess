@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.0-beta.5
+
+- Keep email-change feedback accurate when the backend confirms changes immediately or requires confirmation links.
+
 ## 2.0.0-beta.4
 
 - Short email signup with optional profile details after account creation.

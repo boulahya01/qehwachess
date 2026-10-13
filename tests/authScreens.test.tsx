@@ -105,6 +105,14 @@ it('requires a recovery session before offering a new password form', () => {
   expect(renderer!.root.findAllByType('form')).toHaveLength(0);
   expect(text()).toContain('Request a fresh link');
 });
+
+it('does not promise confirmation emails when the backend can confirm email changes immediately', async () => {
+  signedIn(); auth.updateEmail.mockResolvedValue({ error: null }); mount(<SecurityPage />);
+  const change = renderer!.root.findAllByType('button').find(button => button.children.includes('Change email'))!;
+  act(() => change.props.onClick()); fill('change-email', 'new@example.com'); await submit();
+  expect(text()).toContain('Email change requested.');
+  expect(text()).not.toContain('Your current address stays active until confirmation.');
+});
 it('rejects mismatched recovery passwords without changing credentials', async () => {
   signedIn();
   auth.recoveryReady = true;
