@@ -1,15 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Qehwa Chess — The Shared Cup: coffee cup centered on a chessboard">
-  <defs>
-    <clipPath id="edge"><rect width="512" height="512" rx="72" /></clipPath>
-  </defs>
-  <g clip-path="url(#edge)">
-    <rect width="512" height="512" fill="#EDE9DF"/>
-    <rect x="0" y="0" width="256" height="256" fill="#173F34"/>
-    <rect x="256" y="256" width="256" height="256" fill="#173F34"/>
-    <!-- Handle: exactly 45 degrees, painted behind the rim for a seamless attachment. -->
-    <path d="M 341.559921 341.559921 L 409.442172 409.442172" stroke="#FFFDF8" stroke-width="38" stroke-linecap="round" />
-    <!-- Both coffee circles have the same exact center as the checkerboard cross. -->
-    <circle cx="256" cy="256" r="138" fill="#FFFDF8" />
-    <circle cx="256" cy="256" r="108" fill="#212322" />
-  </g>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title"><title id="title">Qehwa Chess — Shared Cup</title><defs><clipPath id="board"><rect x="16" y="16" width="480" height="480" rx="32"/></clipPath></defs><g clip-path="url(#board)"><path fill="#FFFDF8" d="M16 16h480v480H16z"/><path fill="#1C6749" d="M16 16h240v240H16zm240 240h240v240H256z"/></g><g transform="rotate(45 256 256)"><rect x="350" y="224" width="104" height="64" rx="32" fill="#FFFDF8"/><rect x="376" y="244" width="54" height="24" rx="12" fill="#1C6749"/></g><circle cx="256" cy="256" r="140" fill="#1C6749"/><circle cx="256" cy="256" r="136" fill="#FFFDF8"/><circle cx="256" cy="256" r="108" fill="#212322"/></svg>

@@ -8,7 +8,7 @@ Use `2.0.0-beta.N` for review builds and increase N for each published beta. Kee
 
 ## Design system
 
-React, TypeScript, Vite, Tailwind 3, and Supabase remain the application stack. Outfit is the display and interface typeface; Noto Sans Arabic supports Arabic text. Font packages include their OFL licenses.
+React, TypeScript, Vite, Tailwind 3, and Supabase remain the application stack. Outfit is the display and interface typeface; Tajawal supports Arabic text. Font packages include their OFL licenses.
 
 Colors, surfaces, feedback, and motion share semantic theme tokens in src/index.css. Jade is the interface accent. Buttons use 12px corners, cards 20px, and large editorial panels 24-28px. Navigation uses layer 40, menus 50, and dialogs 100. New controls support keyboard focus, labelled inputs, touch targets, and reduced motion.
 
@@ -16,7 +16,13 @@ The homepage loads responsive local WebP artwork. The community images are illus
 
 ## Beta scope
 
-Homepage, shared navigation and footer, tournament catalogue and cards, event page presentation, authentication presentation, and tournament return intent. Existing account, club, meetup, messaging, and organiser screens inherit the shared system; their workflows still require individual V2 design and validation.
+Beta.6 coordinates the shared layouts, Play/Community/Messages/Account navigation, game-first account dashboard, public directories, event details, maps, messaging and organizer workspace. Sign-in and signup use the selected image-and-form desktop composition, with a focused form on smaller screens. Recovery, confirmation and account feedback stay compact. Required signup data remains email/password only.
+
+Fields share persistent labels, contextual hints, validation after interaction, accessible errors, and normal/focused/disabled/pending states. Hover motion is restrained. The tournament editor is a dedicated route with grouped sections, explicit saving, failed-save preservation and unsaved-edit guards. Settings distinguish public details and private contact data.
+
+The Shared Cup mark retains the original coffee/board idea with refined proportions, rim and handle. `/brand/` publishes color and monochrome vector downloads, PNGs, a construction diagram and usage guidance. `/privacy/` and `/terms/` are accessible without login in EN/FR/AR.
+
+See [V2_BETA6_QA.md](V2_BETA6_QA.md) for the tested scope and remaining acceptance checks. The new marketing landing page, MFA, individual device management and PWA functionality remain later stages.
 
 ## Before stable 2.0.0
 
@@ -32,7 +38,7 @@ Homepage, shared navigation and footer, tournament catalogue and cards, event pa
 
 Beta.4 introduces short email signup, optional profile settings, Google and Discord entry points, single-use callbacks, confirmation, recovery, password reset, email changes, and connected sign-in controls. The compatible profile migration is provided and applied to the isolated test backend. Playing and organizing share one profile; organizer activation does not grant administrator access. See [AUTH_SETUP.md](AUTH_SETUP.md) for migration, redirects, provider flags, identity linking, and email setup.
 
-Provider enablement is separate from verified consent and account linking. Test complete email and social-provider journeys before stable release. Private profile fields still need a reviewed database access design before production rollout. Return users to their explicit action without registering them automatically.
+Provider enablement is separate from verified consent and account linking. Test complete email and social-provider journeys before stable release. Beta.6 separates private contact data with owner-only access and direct SQL regression coverage; validate those access rules again on the eventual production backend. Return users to their explicit action without registering them automatically.
 
 ## PWA sequence
 
@@ -40,3 +46,7 @@ Provider enablement is separate from verified consent and account linking. Test 
 2. Cache selected public events with a visible freshness indicator. Never put authenticated API responses, messages, profiles, tokens, or registration mutations in a shared service-worker cache.
 3. Add opt-in reminders using persisted scheduling and Web Push, with timezone, permission, deduplication, and cancellation handling.
 4. Support offline drafts if useful. Joining and cancelling events always require server confirmation.
+
+## Discord sequence
+
+Finish beta.6 before implementing bot features. Google/Discord account authentication and the community bot have separate credentials and permissions. The test bot is installed, but no bot Edge Functions are currently deployed. Phase 1 is tournament announcements with one shared bot, per-club configuration and reliable Supabase delivery. Review [DISCORD_PHASE1_PLAN.md](DISCORD_PHASE1_PLAN.md) before changing integration code. Slash commands, reminders, results, rankings and discovery stay outside Phase 1.

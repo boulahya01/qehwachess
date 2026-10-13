@@ -6,7 +6,9 @@ The application uses Supabase Auth with PKCE, one profile per authenticated user
 
 Apply `supabase/migrations/20261013033842_optional_auth_profiles_and_dual_participation.sql` before deploying this frontend to a new backend. It creates minimal profiles, ignores client-supplied roles at signup, synchronizes confirmed email changes, and permits organizer accounts to participate as players. Existing accounts are preserved. The migration is already applied to the isolated test backend.
 
-Run `supabase/tests/optional_auth_profiles.sql` against a test database. Its account fixtures and mutations run inside a rolled-back transaction.
+Apply `supabase/migrations/20261013060325_private_profile_contacts_and_auth_capabilities.sql` for beta.6. It moves login email and private phone to owner-only `profile_contacts`, removes those columns from public profiles, and adds authenticated self-service profile saving and password capability reporting. User IDs, roles and participation relationships are retained. This migration is already applied to the isolated test backend. Coordinate the schema and frontend release: older clients that select removed profile columns need to reload the new build.
+
+Run `supabase/tests/optional_auth_profiles.sql` and `supabase/tests/private_profile_contacts.sql` against a test database. Fixtures and mutations run inside rolled-back transactions. These test minimal signup, dual participation, role boundaries, public/private data access, atomic saving and OAuth-only password availability.
 
 ## Environment
 
@@ -33,13 +35,21 @@ Configure and validate production SMTP before inviting real users. Enable email 
 
 Default PKCE links must be opened in the browser that initiated the request. Explain this to users and test refresh, expiry, reuse, and missing verifier states. If cross-device links are required, configure reviewed token-hash email templates targeting `/auth/callback?token_hash=...&type=signup|recovery|email_change` and verify the complete journey. Unsupported invite links and legacy implicit-session URL fragments are not handled by this release; request a fresh link after upgrading.
 
-Secure email change may require both inboxes. The security screen uses the authenticated account's current email and exposes a pending address separately. The database email field changes only when Supabase changes the authenticated user's email.
+Secure email change may require both inboxes. The security screen uses the authenticated account's current email and exposes a pending address separately. The private contact email changes only when Supabase changes the authenticated user's email. Public profile queries never include the login email or private phone.
+
+## Account controls
+
+Password availability is queried from a self-only capability RPC; an email identity alone does not establish that a password was set. The interface stays disabled while capability information is unknown. Provider disconnect checks fresh identities and preserves a usable alternative; Supabase enforces its identity safeguards as well. A linked provider callback returns to Security, not a new account.
+
+Ordinary sign-out uses `signOut('local')`. The separately confirmed global action uses `signOut('global')`; existing access tokens may remain valid until expiry. Unsaved edits are checked before signing out. Password drafts are never stored.
+
+The public `/privacy/` and `/terms/` pages identify this noncommercial service and its operator. Publishing them does not complete Google OAuth branding/domain verification. Account deletion is a manual email request; opening the user's mail app does not submit a request.
 
 ## Remaining production checks
 
 - Real Google and Discord consent, callback, session refresh, logout, and linking on the intended domain.
 - Signup and password reset delivery, reuse/expiry, password updates, and confirmation from both email inboxes.
-- Complete profile privacy work: legacy `profiles` SELECT policies still expose email and phone. The contact field is labelled public; the UI does not make those fields private. Split private account data or apply a reviewed column-access design before production rollout.
+- Retest private contact policies on the eventual production backend after applying the reviewed migration. Published club/event contact addresses remain public by design.
 - Existing Supabase advisory findings, including legacy function permissions and password protection, remain a separate hardening task. See the [Supabase database linter](https://supabase.com/docs/guides/database/database-linter).
 
 References: [Google sign-in](https://supabase.com/docs/guides/auth/social-login/auth-google), [Discord sign-in](https://supabase.com/docs/guides/auth/social-login/auth-discord), [identity linking](https://supabase.com/docs/guides/auth/auth-identity-linking), [password flows](https://supabase.com/docs/guides/auth/passwords), and [redirect configuration](https://supabase.com/docs/guides/auth/redirect-urls).
