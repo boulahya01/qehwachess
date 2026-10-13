@@ -1,5 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import { authTranslations } from '@/lib/translationsAuth';
 import { v2Translations } from '@/lib/translationsV2';
 
 export type Language = 'en' | 'fr' | 'ar';
@@ -952,7 +953,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   }
 
   function t(text: string) {
-    return language === 'en' ? text : v2Translations[language][text] ?? translations[language][text] ?? text;
+    return language === 'en' ? text : authTranslations[language][text] ?? v2Translations[language][text] ?? translations[language][text] ?? text;
   }
 
   return (

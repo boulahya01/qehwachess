@@ -25,7 +25,7 @@ export function usePlayerCount() {
     void (async () => {
       try {
         const { count, error } = await supabase.from('profiles').select('id', { count: 'exact', head: true })
-          .eq('role', 'player').abortSignal(controller.signal);
+          .in('role', ['player', 'organizer']).abortSignal(controller.signal);
         if (!controller.signal.aborted) setPlayerCount(error ? null : count);
       } catch {
         if (!controller.signal.aborted) setPlayerCount(null);

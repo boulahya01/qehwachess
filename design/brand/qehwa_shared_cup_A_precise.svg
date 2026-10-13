@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Qehwa Chess — The Shared Cup: coffee cup centered on a chessboard">
+  <defs>
+    <clipPath id="edge"><rect width="512" height="512" rx="72" /></clipPath>
+  </defs>
+  <g clip-path="url(#edge)">
+    <rect width="512" height="512" fill="#EDE9DF"/>
+    <rect x="0" y="0" width="256" height="256" fill="#173F34"/>
+    <rect x="256" y="256" width="256" height="256" fill="#173F34"/>
+    <!-- Handle: exactly 45 degrees, painted behind the rim for a seamless attachment. -->
+    <path d="M 341.559921 341.559921 L 409.442172 409.442172" stroke="#FFFDF8" stroke-width="38" stroke-linecap="round" />
+    <!-- Both coffee circles have the same exact center as the checkerboard cross. -->
+    <circle cx="256" cy="256" r="138" fill="#FFFDF8" />
+    <circle cx="256" cy="256" r="108" fill="#212322" />
+  </g>
+</svg>

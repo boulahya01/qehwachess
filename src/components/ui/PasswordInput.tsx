@@ -18,7 +18,7 @@ export function PasswordInput({
   return (
     <div className="relative">
       <Lock
-        className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500"
+        className="absolute start-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500"
         aria-hidden="true"
       />
       <input
@@ -28,9 +28,9 @@ export function PasswordInput({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         autoComplete={newPassword ? 'new-password' : 'current-password'}
-        minLength={newPassword ? 6 : undefined}
+        minLength={newPassword ? 8 : undefined}
         className="w-full ps-11 pe-14 py-3 bg-surface-800 border border-surface-700 rounded-xl text-white"
-        placeholder={newPassword ? t('At least 6 characters') : undefined}
+        placeholder={newPassword ? t('At least 8 characters') : undefined}
       />
       <button
         type="button"

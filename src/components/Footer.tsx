@@ -1,5 +1,5 @@
 import { Link } from '@/context/RouterContext';
-import { Crown } from 'lucide-react';
+import { BrandMark } from '@/components/BrandMark';
 import { useLanguage } from '@/context/LanguageContext';
 
 export function Footer() {
@@ -11,7 +11,7 @@ export function Footer() {
           <div>
             <Link to={{ name: 'home' }} className="brand-lockup">
               <span className="brand-symbol">
-                <Crown size={19} strokeWidth={1.7} />
+                <BrandMark />
               </span>
               Qehwa Chess
             </Link>

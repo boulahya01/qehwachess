@@ -30,7 +30,9 @@ Homepage, shared navigation and footer, tournament catalogue and cards, event pa
 
 ## Authentication development
 
-The current database requires city and chess profile data at sign-up. A shorter account flow needs a compatible profile migration before changing required frontend fields. Add Google or email OTP only after provider, redirects, production email delivery, identity linking, and recovery have been configured and tested. Return users to their explicit action without registering them automatically.
+Beta.4 introduces short email signup, optional profile settings, Google and Discord entry points, single-use callbacks, confirmation, recovery, password reset, email changes, and connected sign-in controls. The compatible profile migration is provided and applied to the isolated test backend. Playing and organizing share one profile; organizer activation does not grant administrator access. See [AUTH_SETUP.md](AUTH_SETUP.md) for migration, redirects, provider flags, identity linking, and email setup.
+
+Provider enablement is separate from verified consent and account linking. Test complete email and social-provider journeys before stable release. Private profile fields still need a reviewed database access design before production rollout. Return users to their explicit action without registering them automatically.
 
 ## PWA sequence
 

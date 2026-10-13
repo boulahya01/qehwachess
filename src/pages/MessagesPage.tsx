@@ -87,7 +87,7 @@ export function MessagesPage({ playerId, meetupId }: { playerId?: string; meetup
           .from('profiles')
           .select('id, full_name, avatar_url')
           .eq('id', playerId)
-          .eq('role', 'player')
+          .in('role', ['player', 'organizer'])
           .maybeSingle();
         if (!active) return;
         if (playerError) setError(playerError.message);

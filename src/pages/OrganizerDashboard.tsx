@@ -5,7 +5,8 @@ import { supabase } from '@/lib/supabase';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { PageLoader, EmptyState, ErrorState } from '@/components/ui/Feedback';
+import { OrganizingIntro } from '@/components/OrganizingIntro';
+import { PageLoader, EmptyState } from '@/components/ui/Feedback';
 import {
   Trophy,
   Plus,
@@ -68,13 +69,7 @@ export function OrganizerDashboard() {
     navigate({ name: 'signin' });
     return null;
   }
-  if (profile?.role !== 'organizer' && profile?.role !== 'admin') {
-    return (
-      <div className="pt-24">
-        <ErrorState message={t('You need an organizer account to access this page.')} />
-      </div>
-    );
-  }
+  if (profile?.role !== 'organizer' && profile?.role !== 'admin') return <OrganizingIntro />;
 
   const stats = {
     total: tournaments.length,

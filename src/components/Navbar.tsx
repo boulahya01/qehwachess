@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useRouter } from '@/context/RouterContext';
 import { useAuth } from '@/context/AuthContext';
 import { Language, useLanguage } from '@/context/LanguageContext';
+import { BrandMark } from '@/components/BrandMark';
+import { authError } from '@/lib/authFlow';
 import { useTheme } from '@/context/ThemeContext';
 import {
   Menu,
@@ -26,6 +28,7 @@ export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [signoutError, setSignoutError] = useState<string | null>(null);
   const headerRef = useRef<HTMLElement>(null);
   const menuRef = useRef<HTMLButtonElement>(null);
   const moreRef = useRef<HTMLButtonElement>(null);
@@ -62,7 +65,11 @@ export function Navbar() {
   }, [mobileOpen, moreOpen, accountOpen]);
 
   const navLinks = [
-    { label: 'Tournaments', to: { name: 'tournaments' } as const, icon: Trophy },
+    {
+      label: 'Tournaments',
+      to: { name: 'tournaments' } as const,
+      icon: Trophy,
+    },
     { label: 'Casual Meetups', to: { name: 'meetups' } as const, icon: Users },
     { label: 'Players', to: { name: 'players' } as const, icon: UserRound },
     { label: 'Map', to: { name: 'map' } as const, icon: MapPin },
@@ -78,8 +85,16 @@ export function Navbar() {
     );
   }
   const accountRoute = { name: 'dashboard' } as const;
-  const themeLabel = t(theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode');
-  const authPage = route.name === 'signin' || route.name === 'signup';
+  const themeLabel = t(
+    theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'
+  );
+  const authPage = [
+    'signin',
+    'signup',
+    'forgotPassword',
+    'resetPassword',
+    'authCallback',
+  ].includes(route.name);
   const accountLinks = (
     <>
       <Link to={accountRoute} className="nav-link">
@@ -91,6 +106,12 @@ export function Navbar() {
       <Link to={{ name: 'profile' }} className="nav-link">
         {t('Profile Settings')}
       </Link>
+      <Link to={{ name: 'security' }} className="nav-link">
+        {t('Sign-in & security')}
+      </Link>
+      <Link to={{ name: 'organizer' }} className="nav-link">
+        {t('Organize events')}
+      </Link>
       {profile?.role === 'organizer' && (
         <Link to={{ name: 'clubManagement' }} className="nav-link">
           {t('Manage Clubs')}
@@ -100,7 +121,8 @@ export function Navbar() {
         type="button"
         className="nav-link gap-2 w-full"
         onClick={() => {
-          void signOut();
+          setSignoutError(null);
+          void signOut().catch((caught) => setSignoutError(authError(caught)));
           setAccountOpen(false);
           setMobileOpen(false);
         }}
@@ -113,16 +135,25 @@ export function Navbar() {
 
   return (
     <>
-      <header className="site-header" ref={headerRef}>
+      <header
+        className={`site-header ${authPage ? 'auth-header' : ''}`}
+        ref={headerRef}
+      >
         <nav aria-label={t('Main navigation')} className="v2-container">
           <div className="nav-inner">
-            <Link to={{ name: 'home' }} className="brand-lockup" aria-label="Qehwa Chess">
+            <Link
+              to={{ name: 'home' }}
+              className="brand-lockup"
+              aria-label="Qehwa Chess"
+            >
               <span className="brand-symbol">
-                <Crown size={19} strokeWidth={1.7} />
+                <BrandMark />
               </span>
               Qehwa Chess
             </Link>
-            <div className="hidden xl:flex items-center">
+            <div
+              className={authPage ? 'hidden' : 'hidden xl:flex items-center'}
+            >
               {navLinks.slice(0, 4).map((link) => (
                 <Link
                   key={link.label}
@@ -155,7 +186,9 @@ export function Navbar() {
                         key={link.label}
                         to={link.to}
                         className="nav-link"
-                        aria-current={isActive(link.to.name) ? 'page' : undefined}
+                        aria-current={
+                          isActive(link.to.name) ? 'page' : undefined
+                        }
                       >
                         {t(link.label)}
                       </Link>
@@ -184,7 +217,11 @@ export function Navbar() {
               >
                 {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
               </button>
-              <div className="hidden xl:flex items-center gap-2">
+              <div
+                className={
+                  authPage ? 'hidden' : 'hidden xl:flex items-center gap-2'
+                }
+              >
                 {user ? (
                   <>
                     <Link
@@ -236,7 +273,7 @@ export function Navbar() {
               <button
                 type="button"
                 ref={menuRef}
-                className="icon-button xl:hidden"
+                className={authPage ? 'hidden' : 'icon-button xl:hidden'}
                 aria-label={t(mobileOpen ? 'Close menu' : 'Open menu')}
                 aria-expanded={mobileOpen}
                 aria-controls="mobile-navigation"
@@ -274,10 +311,16 @@ export function Navbar() {
                   accountLinks
                 ) : (
                   <>
-                    <Link to={{ name: 'signin' }} className="action action-link action-secondary">
+                    <Link
+                      to={{ name: 'signin' }}
+                      className="action action-link action-secondary"
+                    >
                       {t('Sign In')}
                     </Link>
-                    <Link to={{ name: 'signup' }} className="action action-link action-primary">
+                    <Link
+                      to={{ name: 'signup' }}
+                      className="action action-link action-primary"
+                    >
                       {t('Get Started')}
                     </Link>
                   </>
@@ -286,6 +329,11 @@ export function Navbar() {
             </div>
           )}
         </nav>
+        {signoutError && (
+          <p className="nav-auth-error" role="alert">
+            {t(signoutError)}
+          </p>
+        )}
       </header>
       {!authPage && (
         <nav className="mobile-dock" aria-label={t('Quick navigation')}>
@@ -299,7 +347,10 @@ export function Navbar() {
               <span>{t(link.label)}</span>
             </Link>
           ))}
-          <Link to={{ name: 'map' }} aria-current={isActive('map') ? 'page' : undefined}>
+          <Link
+            to={{ name: 'map' }}
+            aria-current={isActive('map') ? 'page' : undefined}
+          >
             <MapPin size={20} strokeWidth={1.7} />
             <span>{t('Map')}</span>
           </Link>

@@ -10,7 +10,9 @@ import { PageErrorBoundary } from '@/components/PageErrorBoundary';
 import { HomePage } from '@/pages/HomePage';
 
 const TournamentsPage = lazy(() =>
-  import('@/pages/TournamentsPage').then((m) => ({ default: m.TournamentsPage }))
+  import('@/pages/TournamentsPage').then((m) => ({
+    default: m.TournamentsPage,
+  }))
 );
 const MeetupsPage = lazy(() =>
   import('@/pages/MeetupsPage').then((m) => ({ default: m.MeetupsPage }))
@@ -22,15 +24,21 @@ const EventMapPage = lazy(() =>
   import('@/pages/EventMapPage').then((m) => ({ default: m.EventMapPage }))
 );
 const ClubManagementPage = lazy(() =>
-  import('@/pages/ClubManagementPage').then((m) => ({ default: m.ClubManagementPage }))
+  import('@/pages/ClubManagementPage').then((m) => ({
+    default: m.ClubManagementPage,
+  }))
 );
 const MessagesPage = lazy(() =>
   import('@/pages/MessagesPage').then((m) => ({ default: m.MessagesPage }))
 );
 const TournamentDetailPage = lazy(() =>
-  import('@/pages/TournamentDetailPage').then((m) => ({ default: m.TournamentDetailPage }))
+  import('@/pages/TournamentDetailPage').then((m) => ({
+    default: m.TournamentDetailPage,
+  }))
 );
-const ClubsPage = lazy(() => import('@/pages/ClubsPage').then((m) => ({ default: m.ClubsPage })));
+const ClubsPage = lazy(() =>
+  import('@/pages/ClubsPage').then((m) => ({ default: m.ClubsPage }))
+);
 const ClubDetailPage = lazy(() =>
   import('@/pages/ClubDetailPage').then((m) => ({ default: m.ClubDetailPage }))
 );
@@ -46,11 +54,33 @@ const SignInPage = lazy(() =>
 const SignUpPage = lazy(() =>
   import('@/pages/SignUpPage').then((m) => ({ default: m.SignUpPage }))
 );
+const ForgotPasswordPage = lazy(() =>
+  import('@/pages/ForgotPasswordPage').then((m) => ({
+    default: m.ForgotPasswordPage,
+  }))
+);
+const ResetPasswordPage = lazy(() =>
+  import('@/pages/ResetPasswordPage').then((m) => ({
+    default: m.ResetPasswordPage,
+  }))
+);
+const AuthCallbackPage = lazy(() =>
+  import('@/pages/AuthCallbackPage').then((m) => ({
+    default: m.AuthCallbackPage,
+  }))
+);
+const SecurityPage = lazy(() =>
+  import('@/pages/SecurityPage').then((m) => ({ default: m.SecurityPage }))
+);
 const PlayerDashboard = lazy(() =>
-  import('@/pages/PlayerDashboard').then((m) => ({ default: m.PlayerDashboard }))
+  import('@/pages/PlayerDashboard').then((m) => ({
+    default: m.PlayerDashboard,
+  }))
 );
 const OrganizerDashboard = lazy(() =>
-  import('@/pages/OrganizerDashboard').then((m) => ({ default: m.OrganizerDashboard }))
+  import('@/pages/OrganizerDashboard').then((m) => ({
+    default: m.OrganizerDashboard,
+  }))
 );
 const AdminDashboard = lazy(() =>
   import('@/pages/AdminDashboard').then((m) => ({ default: m.AdminDashboard }))
@@ -81,7 +111,9 @@ function AppRoutes() {
       case 'clubManagement':
         return <ClubManagementPage />;
       case 'messages':
-        return <MessagesPage playerId={route.playerId} meetupId={route.meetupId} />;
+        return (
+          <MessagesPage playerId={route.playerId} meetupId={route.meetupId} />
+        );
       case 'clubs':
         return <ClubsPage />;
       case 'club':
@@ -95,9 +127,16 @@ function AppRoutes() {
       case 'signup':
         return <SignUpPage />;
       case 'dashboard':
-        if (profile?.role === 'organizer') return <OrganizerDashboard />;
         if (profile?.role === 'admin') return <AdminDashboard />;
         return <PlayerDashboard />;
+      case 'forgotPassword':
+        return <ForgotPasswordPage />;
+      case 'resetPassword':
+        return <ResetPasswordPage />;
+      case 'authCallback':
+        return <AuthCallbackPage />;
+      case 'security':
+        return <SecurityPage />;
       case 'organizer':
         return <OrganizerDashboard />;
       case 'admin':
@@ -109,7 +148,13 @@ function AppRoutes() {
     }
   };
 
-  const isAuthPage = route.name === 'signin' || route.name === 'signup';
+  const isAuthPage = [
+    'signin',
+    'signup',
+    'forgotPassword',
+    'resetPassword',
+    'authCallback',
+  ].includes(route.name);
 
   return (
     <div className="min-h-screen bg-surface-950 flex flex-col">
@@ -127,7 +172,9 @@ function AppRoutes() {
       <main id="main-content" tabIndex={-1} className="flex-1">
         <PageErrorBoundary
           key={`${route.name}:${'id' in route ? route.id : ''}`}
-          message={t('This page could not be loaded. Please reload and try again.')}
+          message={t(
+            'This page could not be loaded. Please reload and try again.'
+          )}
           reloadLabel={t('Reload')}
         >
           <Suspense
@@ -148,7 +195,9 @@ function AppRoutes() {
 
 function AppShell() {
   const { loading, error } = useAuth();
+  const { route } = useRouter();
   const { t } = useLanguage();
+  if (route.name === 'authCallback') return <AppRoutes />;
   if (loading)
     return (
       <div className="v2-container pt-24">

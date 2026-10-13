@@ -141,7 +141,7 @@ export function TournamentDetailPage({ id }: { id: string }) {
       navigate({ name: 'signin', tournamentId: id });
       return;
     }
-    if (profile?.role !== 'player') {
+    if (!['player', 'organizer'].includes(profile?.role ?? '')) {
       setError(t('Only player accounts can register for tournaments.'));
       return;
     }

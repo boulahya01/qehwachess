@@ -49,7 +49,7 @@ export function PlayersPage() {
         supabase
           .from('profiles')
           .select('id, full_name, username, avatar_url, bio, city_id, lichess_username, chesscom_username, fide_id, city:cities(name, latitude, longitude)')
-          .eq('role', 'player')
+          .in('role', ['player', 'organizer'])
           .order('full_name')
           .limit(100),
         supabase
@@ -110,7 +110,7 @@ export function PlayersPage() {
   }
 
   async function setOpenToPlay() {
-    if (!user || profile?.role !== 'player') return;
+    if (!user || !['player', 'organizer'].includes(profile?.role ?? '')) return;
     setAvailabilitySaving(true);
     setError(null);
     try {
@@ -188,7 +188,7 @@ export function PlayersPage() {
         {locationErrorMessage() && <p role="alert" className="mb-4 text-sm text-error-400">{locationErrorMessage()}</p>}
         {coordinates && <p className="mb-4 text-xs text-gray-500">{t('Nearby players are sorted by distance to their city center; exact player locations are not shared.')} {t('Open a player card and choose Message to start a private chat.')}</p>}
 
-        {user && profile?.role === 'player' && (
+        {user && ['player', 'organizer'].includes(profile?.role ?? '') && (
           <section className="mb-6 rounded-2xl border border-brand-500/20 bg-brand-500/5 p-4 sm:p-5">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>

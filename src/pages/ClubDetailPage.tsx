@@ -127,7 +127,7 @@ export function ClubDetailPage({ id }: { id: string }) {
     setMembershipLoading(false);
   }
 
-  const canRequestMembership = profile?.role === 'player' && membershipStatus !== 'active' && membershipStatus !== 'pending';
+  const canRequestMembership = ['player', 'organizer'].includes(profile?.role ?? '') && membershipStatus !== 'active' && membershipStatus !== 'pending';
 
   return (
     <div className="min-h-screen pt-20 pb-20">
@@ -169,7 +169,7 @@ export function ClubDetailPage({ id }: { id: string }) {
               {club.address && (
                 <p className="text-sm text-gray-500 mt-3">{club.address}</p>
               )}
-              {user && profile?.role === 'player' && (
+              {user && ['player', 'organizer'].includes(profile?.role ?? '') && (
                 <div className="mt-5">
                   {membershipStatus === 'active' ? (
                     <div className="flex flex-wrap items-center gap-3">

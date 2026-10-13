@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.0.0-beta.4
+
+- Short email signup with optional profile details after account creation.
+- Google and Discord entry points, connected sign-in controls, and single-use PKCE callbacks.
+- Consistent confirmation, recovery, password reset, email change, and security screens.
+- One account can play and enable organizing; existing registrations and messages stay together.
+- Focused profile settings with optional sections, public-contact disclosure, and persistent save feedback.
+- Integrate the approved Shared Cup logo, favicon, and touch icon.
+- French and Arabic auth copy, keyboard controls, mobile layouts, and reduced-motion loading states.
+- Add a compatible profile migration and regression coverage for callbacks, recovery, identity linking, and organizer participation.
+
+Social-provider consent, email delivery, secure email changes, and cross-device recovery remain release checks against the configured backend. This is a test preview, not the stable 2.0.0 release.
+
 ## 2.0.0-beta.3
 
 - Improve status badge contrast in the light theme.
