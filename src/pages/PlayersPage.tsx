@@ -8,9 +8,9 @@ import {
   Search,
   UserRound,
 } from 'lucide-react';
-import { useLanguage } from '@/context/LanguageContext';
+import { useWorkspaceLanguage as useLanguage } from '@/hooks/useWorkspaceLanguage';
 import { useAuth } from '@/context/AuthContext';
-import { useRouter } from '@/context/RouterContext';
+import { Link, useRouter } from '@/context/RouterContext';
 import { useCities } from '@/hooks/useData';
 import { supabase } from '@/lib/supabase';
 import { Card } from '@/components/ui/Card';
@@ -447,7 +447,7 @@ export function PlayersPage() {
                   )}
                   <div className="min-w-0">
                     <h2 className="truncate font-semibold text-white">
-                      {player.full_name}
+                      <Link to={{ name: 'publicProfile', id: player.id }} className="text-link">{player.full_name}</Link>
                     </h2>
                     {player.username && (
                       <p className="truncate text-sm text-brand-300">
@@ -513,7 +513,7 @@ export function PlayersPage() {
                     !player.chesscom_username &&
                     !player.fide_id && (
                       <span className="text-xs text-gray-500">
-                        {t('No chess accounts linked yet.')}
+                        {t('No chess accounts added yet.')}
                       </span>
                     )}
                 </div>

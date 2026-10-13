@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter, Link } from '@/context/RouterContext';
-import { useLanguage } from '@/context/LanguageContext';
+import { useWorkspaceLanguage as useLanguage } from '@/hooks/useWorkspaceLanguage';
 import { supabase } from '@/lib/supabase';
 import { authError } from '@/lib/authFlow';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button';
 import { PageLoader } from '@/components/ui/Feedback';
 import { AuthMessage } from '@/components/auth/AuthParts';
 import { OrganizingIntro } from '@/components/OrganizingIntro';
+import { TournamentProgress } from '@/components/TournamentProgress';
 import { City, Club, TournamentFormat, TournamentStatus } from '@/types';
 import { tournamentFormatLabels, tournamentStatusLabels } from '@/lib/utils';
 
@@ -30,7 +31,7 @@ const initial = {
   prize_fund: '',
   contact_email: '',
   contact_phone: '',
-  status: 'pending' as TournamentStatus,
+  status: 'draft' as TournamentStatus,
   image_url: '',
   discord_announcements_enabled: true,
 };
@@ -44,6 +45,8 @@ export function TournamentEditorPage() {
   const { t } = useLanguage();
   const userId = user?.id;
   const id = route.name === 'tournamentEditor' ? route.id : undefined;
+  const requestedClubId =
+    route.name === 'tournamentEditor' ? route.clubId : undefined;
   const [form, setForm] = useState(initial);
   const [saved, setSaved] = useState(initial);
   const [cities, setCities] = useState<City[]>([]);
@@ -76,6 +79,13 @@ export function TournamentEditorPage() {
         if (cityResult.error || clubResult.error)
           throw cityResult.error || clubResult.error;
         let next = { ...initial };
+        if (
+          !id &&
+          requestedClubId &&
+          clubResult.data?.some((club) => club.id === requestedClubId)
+        ) {
+          next.club_id = requestedClubId;
+        }
         if (id) {
           const query = supabase.from('tournaments').select('*').eq('id', id);
           if (profile?.role !== 'admin') query.eq('organizer_id', userId);
@@ -112,7 +122,7 @@ export function TournamentEditorPage() {
     return () => {
       active = false;
     };
-  }, [id, userId, profile?.role]);
+  }, [id, userId, profile?.role, requestedClubId]);
   function update(key: keyof typeof initial, value: string | number | boolean) {
     setForm((current) => ({ ...current, [key]: value }));
   }
@@ -227,6 +237,7 @@ export function TournamentEditorPage() {
       <header className="security-heading">
         <h1>{t(id ? 'Edit Tournament' : 'Create Tournament')}</h1>
       </header>
+      <TournamentProgress status={id ? saved.status : 'draft'} />
       <AuthMessage message={error} />
       {!loadFailed && (
         <form onSubmit={submit} aria-busy={saving}>
@@ -235,7 +246,7 @@ export function TournamentEditorPage() {
             <div className="editor-grid">
               {input('title', 'Title', 'text', true, { maxLength: 160 })}
               <div className="auth-field">
-                <label htmlFor="event-status">{t('Status')}</label>
+                <label htmlFor="event-status">{t('Save as')}</label>
                 <Field>
                   <select
                     id="event-status"
@@ -246,7 +257,11 @@ export function TournamentEditorPage() {
                   >
                     {statuses.map((status) => (
                       <option key={status} value={status}>
-                        {t(tournamentStatusLabels[status])}
+                        {t(
+                          status === 'pending'
+                            ? 'Submit for review'
+                            : tournamentStatusLabels[status]
+                        )}
                       </option>
                     ))}
                   </select>
@@ -408,7 +423,13 @@ export function TournamentEditorPage() {
             </Button>
             <Button type="submit" disabled={saving || (Boolean(id) && !dirty)}>
               {t(
-                saving ? 'Saving...' : id ? 'Save Changes' : 'Create Tournament'
+                saving
+                  ? 'Saving...'
+                  : form.status === 'pending' && saved.status !== 'pending'
+                    ? 'Submit for review'
+                    : id
+                      ? 'Save Changes'
+                      : 'Save draft'
               )}
             </Button>
           </div>

@@ -1,7 +1,9 @@
+import { ClubWorkspaceNavigation } from '@/components/ClubWorkspaceNavigation';
+import { ClubEvents } from '@/components/ClubEvents';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { authError } from '@/lib/authFlow';
 import { Field } from '@/components/ui/Field';
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useEffect, useState, useRef } from 'react';
 import {
   AlertCircle,
   Building2,
@@ -14,9 +16,9 @@ import {
   X,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { useRouter } from '@/context/RouterContext';
+import { Link, useRouter } from '@/context/RouterContext';
 import { useCities } from '@/hooks/useData';
-import { useLanguage } from '@/context/LanguageContext';
+import { useWorkspaceLanguage as useLanguage } from '@/hooks/useWorkspaceLanguage';
 import { supabase } from '@/lib/supabase';
 import type { Club, ClubMembership } from '@/types';
 import { Button } from '@/components/ui/Button';
@@ -44,12 +46,30 @@ interface ManagedTeam {
 export function ClubManagementPage() {
   const { t } = useLanguage();
   const { user, profile, loading: authLoading } = useAuth();
-  const { navigate } = useRouter();
+  const { route, navigate } = useRouter();
+  const routeClubId =
+    route.name === 'clubManagement' ? route.clubId : undefined;
+  const section =
+    route.name === 'clubManagement' ? (route.section ?? 'events') : 'events';
   const { cities } = useCities();
+  const selectedClubRef = useRef('');
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
   const [clubs, setClubs] = useState<Club[]>([]);
   const [selectedClubId, setSelectedClubId] = useState('');
+  selectedClubRef.current = selectedClubId;
   const [memberships, setMemberships] = useState<ManagedMembership[]>([]);
   const [teams, setTeams] = useState<ManagedTeam[]>([]);
+  const [membersLoading, setMembersLoading] = useState(true);
+  const [teamsLoading, setTeamsLoading] = useState(true);
+  const [memberLoadError, setMemberLoadError] = useState(false);
+  const [teamLoadError, setTeamLoadError] = useState(false);
+  const [rosterRevision, setRosterRevision] = useState(0);
   const [teamName, setTeamName] = useState('');
   const [teamMemberIds, setTeamMemberIds] = useState<Record<string, string>>(
     {}
@@ -68,20 +88,28 @@ export function ClubManagementPage() {
     contact_phone: '',
   });
 
-  useUnsavedChanges(
+  const allowLeave = useUnsavedChanges(
     Boolean(
-      showForm &&
-        (form.name ||
-          form.description ||
-          form.address ||
-          form.contact_email ||
-          form.contact_phone)
+      teamName.trim() ||
+        (showForm &&
+          (form.name ||
+            form.description ||
+            form.address ||
+            form.contact_email ||
+            form.contact_phone))
     )
   );
 
   useEffect(() => {
-    if (!user || authLoading) return;
+    if (
+      !user ||
+      authLoading ||
+      !['organizer', 'admin'].includes(profile?.role ?? '')
+    )
+      return;
     let active = true;
+    setLoading(true);
+    setError(null);
     async function loadClubs() {
       const query = supabase
         .from('clubs')
@@ -94,23 +122,35 @@ export function ClubManagementPage() {
       const ownClubs = (data ?? []) as Club[];
       setClubs(ownClubs);
       setSelectedClubId((current) =>
-        ownClubs.some((club) => club.id === current)
-          ? current
-          : (ownClubs[0]?.id ?? '')
+        ownClubs.some((club) => club.id === (routeClubId ?? current))
+          ? (routeClubId ?? current)
+          : routeClubId
+            ? ''
+            : (ownClubs[0]?.id ?? '')
       );
       setLoading(false);
     }
-    void loadClubs();
+    void loadClubs().catch(() => {
+      if (active) {
+        setError('Could not load your clubs. Please try again.');
+        setLoading(false);
+      }
+    });
     return () => {
       active = false;
     };
-  }, [authLoading, profile?.role, user]);
+  }, [authLoading, profile?.role, user, routeClubId, rosterRevision]);
 
   useEffect(() => {
     if (!selectedClubId) {
       setMemberships([]);
       return;
     }
+    setMemberships([]);
+    setMembersLoading(true);
+    setMemberLoadError(false);
+    setTeamName('');
+    setTeamMemberIds({});
     let active = true;
     async function loadMemberships() {
       const { data, error: queryError } = await supabase
@@ -121,20 +161,30 @@ export function ClubManagementPage() {
         .eq('club_id', selectedClubId)
         .order('joined_at', { ascending: false });
       if (!active) return;
-      if (queryError) setError(queryError.message);
+      if (queryError) setMemberLoadError(true);
       setMemberships((data ?? []) as unknown as ManagedMembership[]);
+      setMembersLoading(false);
     }
-    void loadMemberships();
+    void loadMemberships().catch(() => {
+      if (active) {
+        setMemberLoadError(true);
+        setMembersLoading(false);
+      }
+    });
     return () => {
       active = false;
     };
-  }, [selectedClubId]);
+  }, [selectedClubId, rosterRevision]);
 
   useEffect(() => {
+    if (section !== 'teams') return;
     if (!selectedClubId) {
       setTeams([]);
       return;
     }
+    setTeams([]);
+    setTeamsLoading(true);
+    setTeamLoadError(false);
     let active = true;
     async function loadTeams() {
       const { data: teamData, error: teamError } = await supabase
@@ -144,8 +194,9 @@ export function ClubManagementPage() {
         .order('name');
       if (!active) return;
       if (teamError) {
-        setError(teamError.message);
+        setTeamLoadError(true);
         setTeams([]);
+        setTeamsLoading(false);
         return;
       }
       const teamIds = (teamData ?? []).map((team) => team.id);
@@ -159,7 +210,7 @@ export function ClubManagementPage() {
             )
             .in('team_id', teamIds);
         if (!active) return;
-        if (teamMembershipError) setError(teamMembershipError.message);
+        if (teamMembershipError) setTeamLoadError(true);
         teamMemberships = (membershipData ??
           []) as unknown as ManagedTeamMember[];
       }
@@ -173,12 +224,18 @@ export function ClubManagementPage() {
           ),
         }))
       );
+      setTeamsLoading(false);
     }
-    void loadTeams();
+    void loadTeams().catch(() => {
+      if (active) {
+        setTeamLoadError(true);
+        setTeamsLoading(false);
+      }
+    });
     return () => {
       active = false;
     };
-  }, [selectedClubId]);
+  }, [selectedClubId, section, rosterRevision]);
 
   if (authLoading)
     return (
@@ -219,7 +276,7 @@ export function ClubManagementPage() {
         .single();
       if (insertError) {
         setError(insertError.message);
-      } else if (data) {
+      } else if (data && mountedRef.current) {
         setClubs((current) =>
           [...current, data as Club].sort((a, b) =>
             a.name.localeCompare(b.name)
@@ -234,6 +291,12 @@ export function ClubManagementPage() {
           address: '',
           contact_email: '',
           contact_phone: '',
+        });
+        allowLeave();
+        navigate({
+          name: 'clubManagement',
+          clubId: data.id,
+          section: 'events',
         });
       }
     } catch (caught) {
@@ -281,25 +344,32 @@ export function ClubManagementPage() {
 
   async function createTeam(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!selectedClubId || !teamName.trim()) return;
+    if (!selectedClubId || !teamName.trim() || teamSaving) return;
+    const targetClubId = selectedClubId;
     setTeamSaving(true);
     setError(null);
-    const { data, error: insertError } = await supabase
-      .from('club_teams')
-      .insert({ club_id: selectedClubId, name: teamName.trim() })
-      .select('id, club_id, name')
-      .single();
-    if (insertError) {
-      setError(insertError.message);
-    } else if (data) {
+    try {
+      const { data, error: insertError } = await supabase
+        .from('club_teams')
+        .insert({ club_id: targetClubId, name: teamName.trim() })
+        .select('id, club_id, name')
+        .single();
+      if (!mountedRef.current || selectedClubRef.current !== targetClubId)
+        return;
+      if (insertError || !data)
+        throw insertError || new Error('Team not saved');
       setTeams((current) =>
         [...current, { ...data, members: [] }].sort((a, b) =>
           a.name.localeCompare(b.name)
         )
       );
       setTeamName('');
+    } catch {
+      if (mountedRef.current && selectedClubRef.current === targetClubId)
+        setError('Could not create the team. Your draft is still here.');
+    } finally {
+      if (mountedRef.current) setTeamSaving(false);
     }
-    setTeamSaving(false);
   }
 
   async function addTeamMember(team: ManagedTeam) {
@@ -376,12 +446,12 @@ export function ClubManagementPage() {
   ).length;
 
   return (
-    <div className="min-h-screen pt-24 pb-20">
+    <div className="min-h-screen account-page club-workspace-page">
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold text-white">
-              {t('Club Management')}
+              {t('Club workspace')}
             </h1>
             <p className="mt-2 text-gray-500">
               {t(
@@ -409,7 +479,7 @@ export function ClubManagementPage() {
             className="mb-5 flex items-start gap-2 rounded-lg border border-error-500/20 bg-error-500/10 p-3 text-sm text-error-400"
           >
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-            {error}
+            {t(error)}
           </div>
         )}
 
@@ -418,104 +488,126 @@ export function ClubManagementPage() {
             <h2 className="mb-5 text-xl font-bold text-white">
               {t('Create a chess club')}
             </h2>
-            <form onSubmit={createClub} className="grid gap-4 sm:grid-cols-2">
-              <label className="text-sm text-gray-400">
-                {t('Club name')} *
-                <Field>
-                  <input
-                    required
-                    maxLength={120}
-                    value={form.name}
-                    onChange={(event) =>
-                      setForm({ ...form, name: event.target.value })
-                    }
-                    className="mt-1.5 w-full rounded-lg border border-surface-700 bg-surface-800 px-3.5 py-2.5 text-white"
-                  />
-                </Field>
-              </label>
-              <label className="text-sm text-gray-400">
-                {t('City')} *
-                <Field>
-                  <select
-                    required
-                    value={form.city_id}
-                    onChange={(event) =>
-                      setForm({ ...form, city_id: event.target.value })
-                    }
-                    className="mt-1.5 w-full rounded-lg border border-surface-700 bg-surface-800 px-3.5 py-2.5 text-white"
+            <form
+              onSubmit={createClub}
+              className="grid gap-4 sm:grid-cols-2"
+              aria-busy={saving}
+            >
+              <fieldset disabled={saving} className="contents">
+                <label className="text-sm text-gray-400">
+                  {t('Club name')} *
+                  <Field>
+                    <input
+                      required
+                      maxLength={120}
+                      value={form.name}
+                      onChange={(event) =>
+                        setForm({ ...form, name: event.target.value })
+                      }
+                      className="mt-1.5 w-full rounded-lg border border-surface-700 bg-surface-800 px-3.5 py-2.5 text-white"
+                    />
+                  </Field>
+                </label>
+                <label className="text-sm text-gray-400">
+                  {t('City')} *
+                  <Field>
+                    <select
+                      required
+                      value={form.city_id}
+                      onChange={(event) =>
+                        setForm({ ...form, city_id: event.target.value })
+                      }
+                      className="mt-1.5 w-full rounded-lg border border-surface-700 bg-surface-800 px-3.5 py-2.5 text-white"
+                    >
+                      <option value="">{t('Select city')}</option>
+                      {cities.map((city) => (
+                        <option key={city.id} value={city.id}>
+                          {city.name}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                </label>
+                <label className="text-sm text-gray-400 sm:col-span-2">
+                  {t('Description')}
+                  <Field>
+                    <textarea
+                      rows={3}
+                      maxLength={2000}
+                      value={form.description}
+                      onChange={(event) =>
+                        setForm({ ...form, description: event.target.value })
+                      }
+                      className="mt-1.5 w-full rounded-lg border border-surface-700 bg-surface-800 px-3.5 py-2.5 text-white"
+                    />
+                  </Field>
+                </label>
+                <label className="text-sm text-gray-400">
+                  {t('Address')}
+                  <Field>
+                    <input
+                      maxLength={200}
+                      value={form.address}
+                      onChange={(event) =>
+                        setForm({ ...form, address: event.target.value })
+                      }
+                      className="mt-1.5 w-full rounded-lg border border-surface-700 bg-surface-800 px-3.5 py-2.5 text-white"
+                    />
+                  </Field>
+                </label>
+                <label className="text-sm text-gray-400">
+                  {t('Contact Email')}
+                  <Field>
+                    <input
+                      type="email"
+                      value={form.contact_email}
+                      onChange={(event) =>
+                        setForm({ ...form, contact_email: event.target.value })
+                      }
+                      className="mt-1.5 w-full rounded-lg border border-surface-700 bg-surface-800 px-3.5 py-2.5 text-white"
+                    />
+                  </Field>
+                </label>
+                <label className="text-sm text-gray-400">
+                  {t('Contact Phone')}
+                  <Field>
+                    <input
+                      value={form.contact_phone}
+                      onChange={(event) =>
+                        setForm({ ...form, contact_phone: event.target.value })
+                      }
+                      className="mt-1.5 w-full rounded-lg border border-surface-700 bg-surface-800 px-3.5 py-2.5 text-white"
+                    />
+                  </Field>
+                </label>
+                <div className="flex justify-end sm:col-span-2">
+                  <Button
+                    type="submit"
+                    disabled={saving || cities.length === 0}
                   >
-                    <option value="">{t('Select city')}</option>
-                    {cities.map((city) => (
-                      <option key={city.id} value={city.id}>
-                        {city.name}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-              </label>
-              <label className="text-sm text-gray-400 sm:col-span-2">
-                {t('Description')}
-                <Field>
-                  <textarea
-                    rows={3}
-                    maxLength={2000}
-                    value={form.description}
-                    onChange={(event) =>
-                      setForm({ ...form, description: event.target.value })
-                    }
-                    className="mt-1.5 w-full rounded-lg border border-surface-700 bg-surface-800 px-3.5 py-2.5 text-white"
-                  />
-                </Field>
-              </label>
-              <label className="text-sm text-gray-400">
-                {t('Address')}
-                <Field>
-                  <input
-                    maxLength={200}
-                    value={form.address}
-                    onChange={(event) =>
-                      setForm({ ...form, address: event.target.value })
-                    }
-                    className="mt-1.5 w-full rounded-lg border border-surface-700 bg-surface-800 px-3.5 py-2.5 text-white"
-                  />
-                </Field>
-              </label>
-              <label className="text-sm text-gray-400">
-                {t('Contact Email')}
-                <Field>
-                  <input
-                    type="email"
-                    value={form.contact_email}
-                    onChange={(event) =>
-                      setForm({ ...form, contact_email: event.target.value })
-                    }
-                    className="mt-1.5 w-full rounded-lg border border-surface-700 bg-surface-800 px-3.5 py-2.5 text-white"
-                  />
-                </Field>
-              </label>
-              <label className="text-sm text-gray-400">
-                {t('Contact Phone')}
-                <Field>
-                  <input
-                    value={form.contact_phone}
-                    onChange={(event) =>
-                      setForm({ ...form, contact_phone: event.target.value })
-                    }
-                    className="mt-1.5 w-full rounded-lg border border-surface-700 bg-surface-800 px-3.5 py-2.5 text-white"
-                  />
-                </Field>
-              </label>
-              <div className="flex justify-end sm:col-span-2">
-                <Button type="submit" disabled={saving || cities.length === 0}>
-                  {saving ? t('Creating...') : t('Create Club')}
-                </Button>
-              </div>
+                    {saving ? t('Creating...') : t('Create Club')}
+                  </Button>
+                </div>
+              </fieldset>
             </form>
           </Card>
         )}
 
         {loading ? (
           <PageLoader />
+        ) : routeClubId && !selectedClub ? (
+          <ErrorState
+            message={t(
+              'This club is unavailable or you do not have management access.'
+            )}
+          />
+        ) : clubs.length === 0 && error ? (
+          <Button
+            variant="outline"
+            onClick={() => setRosterRevision((v) => v + 1)}
+          >
+            {t('Retry')}
+          </Button>
         ) : clubs.length === 0 ? (
           <Card className="p-6">
             <EmptyState
@@ -533,8 +625,16 @@ export function ClubManagementPage() {
                 <Building2 className="h-4 w-4" />
                 <Field>
                   <select
+                    aria-label={t('Selected club')}
+                    disabled={saving || teamSaving}
                     value={selectedClubId}
-                    onChange={(event) => setSelectedClubId(event.target.value)}
+                    onChange={(event) =>
+                      navigate({
+                        name: 'clubManagement',
+                        clubId: event.target.value,
+                        section,
+                      })
+                    }
                     className="rounded-lg border border-surface-700 bg-surface-900 px-3 py-2 text-white"
                   >
                     {clubs.map((club) => (
@@ -545,133 +645,154 @@ export function ClubManagementPage() {
                   </select>
                 </Field>
               </label>
-              <div className="flex gap-4 text-sm text-gray-400">
-                <span>
-                  {pendingCount} {t('Pending requests')}
-                </span>
-                <span>
-                  {activeCount} {t('Active members')}
-                </span>
-              </div>
+              {!membersLoading && !memberLoadError && (
+                <div className="flex gap-4 text-sm text-gray-400">
+                  <span>
+                    {pendingCount} {t('Pending requests')}
+                  </span>
+                  <span>
+                    {activeCount} {t('Active members')}
+                  </span>
+                </div>
+              )}
             </div>
 
             {selectedClub && (
-              <Card className="mb-5 flex flex-wrap items-center gap-3 p-4">
-                <Building2 className="h-5 w-5 text-brand-400" />
+              <div className="mb-4 flex flex-wrap items-center gap-3">
                 <div>
-                  <p className="font-semibold text-white">
-                    {selectedClub.name}
-                  </p>
                   <p className="flex items-center gap-1 text-sm text-gray-500">
                     <MapPin className="h-3.5 w-3.5" />
                     {selectedClub.city?.name}
                   </p>
                 </div>
-                {selectedClub.organizer_id === user?.id && (
-                  <Button
-                    variant="ghost"
-                    className="ms-auto"
-                    onClick={() =>
-                      navigate({
-                        name: 'discordIntegration',
-                        scope: 'club',
-                        clubId: selectedClub.id,
-                      })
-                    }
-                  >
-                    {t('Discord announcements')}
-                  </Button>
-                )}
-              </Card>
-            )}
-
-            <h2 className="mb-3 flex items-center gap-2 text-xl font-bold text-white">
-              <Users className="h-5 w-5 text-brand-400" />
-              {t('Members and requests')}
-            </h2>
-            {memberships.length === 0 ? (
-              <Card className="p-5">
-                <EmptyState
-                  icon={<Users className="h-10 w-10" />}
-                  title={t('No members yet')}
-                  description={t('Membership requests will appear here.')}
-                />
-              </Card>
-            ) : (
-              <div className="space-y-3">
-                {memberships.map((membership) => (
-                  <Card
-                    key={membership.id}
-                    className="flex flex-wrap items-center gap-3 p-4"
-                  >
-                    {membership.profile?.avatar_url ? (
-                      <img
-                        src={membership.profile.avatar_url}
-                        alt=""
-                        className="h-11 w-11 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-11 w-11 items-center justify-center rounded-full bg-brand-500/20 font-bold text-brand-200">
-                        {membership.profile?.full_name?.charAt(0) ?? 'U'}
-                      </div>
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-semibold text-white">
-                        {membership.profile?.full_name}
-                      </p>
-                      <p className="truncate text-sm text-gray-500">
-                        {membership.profile?.username
-                          ? `@${membership.profile.username}`
-                          : t('Player')}
-                      </p>
-                    </div>
-                    <span
-                      className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs ${membership.status === 'active' ? 'bg-success-500/10 text-success-300' : membership.status === 'pending' ? 'bg-amber-500/10 text-amber-300' : 'bg-gray-500/10 text-gray-400'}`}
-                    >
-                      {membership.status === 'pending' && (
-                        <Clock3 className="h-3 w-3" />
-                      )}
-                      {t(membership.status)}
-                    </span>
-                    {membership.status === 'pending' && (
-                      <>
-                        <Button
-                          size="sm"
-                          onClick={() =>
-                            void reviewMembership(membership, 'active')
-                          }
-                        >
-                          <Check className="h-4 w-4" />
-                          {t('Approve')}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() =>
-                            void reviewMembership(membership, 'rejected')
-                          }
-                        >
-                          <X className="h-4 w-4" />
-                          {t('Reject')}
-                        </Button>
-                      </>
-                    )}
-                    {membership.status !== 'pending' && (
-                      <Button
-                        size="sm"
-                        variant="danger"
-                        onClick={() => void removeMembership(membership)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        {t('Remove')}
-                      </Button>
-                    )}
-                  </Card>
-                ))}
+                <Link
+                  to={{ name: 'club', id: selectedClub.id }}
+                  className="text-link ms-auto"
+                >
+                  {t('View public club')}
+                </Link>
               </div>
             )}
 
-            <section className="mt-10">
+            {selectedClub && (
+              <ClubWorkspaceNavigation
+                clubId={selectedClub.id}
+                clubName={selectedClub.name}
+                section={section}
+                canConfigureDiscord={selectedClub.organizer_id === user.id}
+              />
+            )}
+            {section === 'events' && selectedClub && (
+              <ClubEvents
+                key={selectedClub.id}
+                clubId={selectedClub.id}
+                canCreate={selectedClub.organizer_id === user.id}
+              />
+            )}
+            <div hidden={section !== 'members'}>
+              <h2 className="mb-3 flex items-center gap-2 text-xl font-bold text-white">
+                <Users className="h-5 w-5 text-brand-400" />
+                {t('Members and requests')}
+              </h2>
+              {membersLoading ? (
+                <PageLoader />
+              ) : memberLoadError ? (
+                <>
+                  <ErrorState
+                    message={t(
+                      'Could not load club members. Please try again.'
+                    )}
+                  />
+                  <Button
+                    variant="outline"
+                    onClick={() => setRosterRevision((v) => v + 1)}
+                  >
+                    {t('Retry')}
+                  </Button>
+                </>
+              ) : memberships.length === 0 ? (
+                <Card className="p-5">
+                  <EmptyState
+                    icon={<Users className="h-10 w-10" />}
+                    title={t('No members yet')}
+                    description={t('Membership requests will appear here.')}
+                  />
+                </Card>
+              ) : (
+                <div className="space-y-3">
+                  {memberships.map((membership) => (
+                    <Card
+                      key={membership.id}
+                      className="flex flex-wrap items-center gap-3 p-4"
+                    >
+                      {membership.profile?.avatar_url ? (
+                        <img
+                          src={membership.profile.avatar_url}
+                          alt=""
+                          className="h-11 w-11 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-brand-500/20 font-bold text-brand-200">
+                          {membership.profile?.full_name?.charAt(0) ?? 'U'}
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-semibold text-white">
+                          {membership.profile?.full_name}
+                        </p>
+                        <p className="truncate text-sm text-gray-500">
+                          {membership.profile?.username
+                            ? `@${membership.profile.username}`
+                            : t('Player')}
+                        </p>
+                      </div>
+                      <span
+                        className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-xs ${membership.status === 'active' ? 'bg-success-500/10 text-success-300' : membership.status === 'pending' ? 'bg-amber-500/10 text-amber-300' : 'bg-gray-500/10 text-gray-400'}`}
+                      >
+                        {membership.status === 'pending' && (
+                          <Clock3 className="h-3 w-3" />
+                        )}
+                        {t(membership.status)}
+                      </span>
+                      {membership.status === 'pending' && (
+                        <>
+                          <Button
+                            size="sm"
+                            onClick={() =>
+                              void reviewMembership(membership, 'active')
+                            }
+                          >
+                            <Check className="h-4 w-4" />
+                            {t('Approve')}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() =>
+                              void reviewMembership(membership, 'rejected')
+                            }
+                          >
+                            <X className="h-4 w-4" />
+                            {t('Reject')}
+                          </Button>
+                        </>
+                      )}
+                      {membership.status !== 'pending' && (
+                        <Button
+                          size="sm"
+                          variant="danger"
+                          onClick={() => void removeMembership(membership)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          {t('Remove')}
+                        </Button>
+                      )}
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+            <section className="mt-6" hidden={section !== 'teams'}>
               <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <h2 className="text-xl font-bold text-white">
@@ -691,6 +812,7 @@ export function ClubManagementPage() {
                     <input
                       required
                       maxLength={100}
+                      disabled={teamSaving}
                       value={teamName}
                       onChange={(event) => setTeamName(event.target.value)}
                       placeholder={t('Team name')}
@@ -703,7 +825,21 @@ export function ClubManagementPage() {
                   </Button>
                 </form>
               </div>
-              {teams.length === 0 ? (
+              {teamsLoading ? (
+                <PageLoader />
+              ) : teamLoadError || memberLoadError ? (
+                <>
+                  <ErrorState
+                    message={t('Could not load club teams. Please try again.')}
+                  />
+                  <Button
+                    variant="outline"
+                    onClick={() => setRosterRevision((v) => v + 1)}
+                  >
+                    {t('Retry')}
+                  </Button>
+                </>
+              ) : teams.length === 0 ? (
                 <Card className="p-5 text-sm text-gray-500">
                   {t('No teams created for this club yet.')}
                 </Card>

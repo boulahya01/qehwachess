@@ -1,79 +1,61 @@
-import { AuthMessage } from '@/components/auth/AuthParts';
 import { useEffect, useState } from 'react';
+import { AuthMessage } from '@/components/auth/AuthParts';
 import { Link, useRouter } from '@/context/RouterContext';
 import { useAuth } from '@/context/AuthContext';
+import { useWorkspaceLanguage as useLanguage } from '@/hooks/useWorkspaceLanguage';
 import { supabase } from '@/lib/supabase';
-import { Card } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { OrganizingIntro } from '@/components/OrganizingIntro';
-import { PageLoader, EmptyState } from '@/components/ui/Feedback';
-import {
-  Trophy,
-  Plus,
-  Edit3,
-  Trash2,
-  Eye,
-  MapPin,
-  Calendar,
-  Clock,
-} from 'lucide-react';
-import { Tournament } from '@/types';
-import {
-  formatDateRange,
-  getDaysUntil,
-  tournamentFormatLabels,
-  tournamentStatusLabels,
-  tournamentStatusColors,
-} from '@/lib/utils';
-import { useLanguage } from '@/context/LanguageContext';
+import { PageLoader } from '@/components/ui/Feedback';
+import { TournamentProgress } from '@/components/TournamentProgress';
+import { tournamentWorkflow } from '@/lib/tournamentWorkflow';
+import { Plus, Trash2, Calendar } from 'lucide-react';
+import type { Tournament } from '@/types';
+import { formatDateRange } from '@/lib/utils';
 
 export function OrganizerDashboard() {
   const { t, language } = useLanguage();
-  const translate = t;
   const { user, profile, loading: authLoading } = useAuth();
   const { navigate } = useRouter();
   const [tournaments, setTournaments] = useState<Tournament[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
-
+  const [revision, setRevision] = useState(0);
+  const canOrganize =
+    profile?.role === 'organizer' || profile?.role === 'admin';
   useEffect(() => {
-    if (!user) return;
-    (async () => {
-      const { data, error: queryError } = await supabase
-        .from('tournaments')
-        .select('*, city:cities(*)')
-        .eq('organizer_id', user.id)
-        .order('created_at', { ascending: false });
-      if (queryError) setError('Could not load your tournaments.');
-      setTournaments(data ?? []);
-      setLoading(false);
+    if (authLoading) return;
+    if (!user) {
+      navigate({ name: 'signin' });
+      return;
+    }
+    if (!canOrganize) return;
+    let active = true;
+    setLoading(true);
+    setError(null);
+    void (async () => {
+      try {
+        const result = await supabase
+          .from('tournaments')
+          .select('*, city:cities(*)')
+          .eq('organizer_id', user.id)
+          .order('created_at', { ascending: false });
+        if (result.error) throw result.error;
+        if (active) setTournaments(result.data ?? []);
+      } catch {
+        if (active) setError('Could not load your tournaments.');
+      } finally {
+        if (active) setLoading(false);
+      }
     })();
-  }, [user]);
-
-  if (authLoading)
-    return (
-      <div className="pt-24">
-        <PageLoader />
-      </div>
-    );
-  if (!user) {
-    navigate({ name: 'signin' });
-    return null;
-  }
-  if (profile?.role !== 'organizer' && profile?.role !== 'admin')
-    return <OrganizingIntro />;
-
-  const stats = {
-    total: tournaments.length,
-    published: tournaments.filter((t) => t.status === 'published').length,
-    pending: tournaments.filter((t) => t.status === 'pending').length,
-    upcoming: tournaments.filter(
-      (t) => t.status === 'published' && getDaysUntil(t.start_date) >= 0
-    ).length,
-  };
-
+    return () => {
+      active = false;
+    };
+  }, [user, authLoading, canOrganize, navigate, revision]);
+  if (authLoading) return <PageLoader />;
+  if (!user) return null;
+  if (!canOrganize) return <OrganizingIntro />;
   async function handleDelete(id: string) {
     if (
       !confirm(
@@ -86,173 +68,128 @@ export function OrganizerDashboard() {
     setDeleting(id);
     setError(null);
     try {
-      const { error } = await supabase
-        .from('tournaments')
-        .delete()
-        .eq('id', id);
-      if (error) throw error;
-      setTournaments((current) =>
-        current.filter((tournament) => tournament.id !== id)
-      );
+      const result = await supabase.from('tournaments').delete().eq('id', id);
+      if (result.error) throw result.error;
+      setTournaments((current) => current.filter((event) => event.id !== id));
     } catch {
       setError('Could not delete the tournament. Please try again.');
     } finally {
       setDeleting(null);
     }
   }
-  function handleEdit(tournament: Tournament) {
-    navigate({ name: 'tournamentEditor', id: tournament.id });
-  }
-  function handleNew() {
-    navigate({ name: 'tournamentEditor' });
-  }
-
+  const ordered = [...tournaments].sort((a, b) => {
+    const order = {
+      draft: 0,
+      pending: 1,
+      published: 2,
+      completed: 3,
+      cancelled: 4,
+    };
+    return order[a.status] - order[b.status];
+  });
   return (
-    <div className="min-h-screen pt-24 pb-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="flex items-start justify-between mb-8 gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-white">
-              {t('Organizer workspace')}
-            </h1>
-            <p className="text-gray-500 mt-2">
-              {t('Manage your tournaments and registrations')}
-            </p>
-          </div>
-          <Button onClick={handleNew}>
-            <Plus className="w-4 h-4" />
-            {t('New Tournament')}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => navigate({ name: 'clubManagement' })}
-          >
-            {t('Manage Clubs')}
-          </Button>
+    <div className="v2-container account-page">
+      <header className="workspace-heading">
+        <div>
+          <p className="hero-eyebrow">{t('Your account')}</p>
+          <h1>{t('My events')}</h1>
+          <p>
+            {t('Create, follow review progress and manage your tournaments.')}
+          </p>
         </div>
-
-        <AuthMessage message={error} />
-        {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {[
-            {
-              icon: Trophy,
-              label: t('Total'),
-              value: stats.total,
-              color: 'text-brand-400',
-            },
-            {
-              icon: Eye,
-              label: t('Published'),
-              value: stats.published,
-              color: 'text-success-400',
-            },
-            {
-              icon: Clock,
-              label: t('Pending'),
-              value: stats.pending,
-              color: 'text-amber-400',
-            },
-            {
-              icon: Calendar,
-              label: t('Upcoming'),
-              value: stats.upcoming,
-              color: 'text-accent-400',
-            },
-          ].map((stat, i) => (
-            <Card key={i} className="p-5">
-              <stat.icon className={`w-5 h-5 ${stat.color} mb-3`} />
-              <p className="text-2xl font-bold text-white">{stat.value}</p>
-              <p className="text-xs text-gray-500 mt-1">{stat.label}</p>
-            </Card>
-          ))}
-        </div>
-
-        {/* Tournament list */}
-        {loading ? (
-          <PageLoader />
-        ) : tournaments.length === 0 ? (
-          <Card className="p-6">
-            <EmptyState
-              icon={<Trophy className="w-12 h-12" />}
-              title={t('No tournaments yet')}
-              description={t(
-                'Create your first tournament to start accepting registrations.'
-              )}
-              action={
-                <Button onClick={handleNew}>
-                  <Plus className="w-4 h-4" />
-                  {t('Create Tournament')}
-                </Button>
-              }
-            />
-          </Card>
-        ) : (
-          <div className="flex flex-col gap-4">
-            {tournaments.map((t) => (
-              <Card key={t.id} className="p-5 flex items-center gap-4">
-                <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-surface-800 border border-surface-700 flex items-center justify-center">
-                  <Trophy className="w-6 h-6 text-brand-400" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-white truncate">
-                    {t.title}
-                  </h3>
-                  <div className="flex items-center gap-3 mt-1.5 text-sm text-gray-500">
-                    <span className="flex items-center gap-1">
-                      <MapPin className="w-3.5 h-3.5" />
-                      {t.city?.name}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Calendar className="w-3.5 h-3.5" />
-                      {formatDateRange(t.start_date, t.end_date, language)}
-                    </span>
-                    <span>{translate(tournamentFormatLabels[t.format])}</span>
-                  </div>
-                </div>
-                <div className="hidden sm:flex flex-col items-end gap-1.5">
-                  <Badge className={tournamentStatusColors[t.status]}>
-                    {translate(tournamentStatusLabels[t.status])}
-                  </Badge>
-                  <span className="text-xs text-gray-500">
-                    {t.max_participants} {translate('max')}
+        <Link
+          to={{ name: 'tournamentEditor' }}
+          className="action action-link action-primary"
+        >
+          <Plus size={18} />
+          {t('Create tournament')}
+        </Link>
+      </header>
+      <TournamentProgress />
+      <AuthMessage message={error} />
+      {error && (
+        <button
+          className="text-link"
+          type="button"
+          onClick={() => setRevision((v) => v + 1)}
+        >
+          {t('Retry')}
+        </button>
+      )}
+      {loading ? (
+        <PageLoader />
+      ) : !error && !ordered.length ? (
+        <section className="quiet-empty">
+          <h2>{t('No tournaments yet')}</h2>
+          <p>
+            {t('Start with a draft. Submit it when the details are ready.')}
+          </p>
+        </section>
+      ) : (
+        <div className="event-workflow-list">
+          {ordered.map((event) => {
+            const flow = tournamentWorkflow(event.status);
+            return (
+              <article key={event.id} className="event-workflow-row">
+                <div className="event-workflow-main">
+                  <span className={`workflow-status status-${event.status}`}>
+                    {t(flow.label)}
                   </span>
+                  <h2>{event.title}</h2>
+                  <p className="field-hint flex items-center gap-2 flex-wrap">
+                    <Calendar size={16} />
+                    {formatDateRange(
+                      event.start_date,
+                      event.end_date,
+                      language
+                    )}{' '}
+                    · {event.city?.name}
+                  </p>
+                  <p className="field-hint mt-3">{t(flow.hint)}</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Link to={{ name: 'tournament', id: t.id }}>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      aria-label={translate('View')}
-                    >
-                      <Eye className="w-4 h-4" />
-                    </Button>
+                <div className="event-workflow-actions">
+                  <Link
+                    to={
+                      ['published', 'cancelled', 'completed'].includes(
+                        event.status
+                      )
+                        ? { name: 'tournament', id: event.id }
+                        : { name: 'tournamentEditor', id: event.id }
+                    }
+                    className="action action-link action-secondary"
+                  >
+                    {t(flow.action)}
                   </Link>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    aria-label={translate('Edit Tournament')}
-                    onClick={() => handleEdit(t)}
-                  >
-                    <Edit3 className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    aria-label={translate('Delete tournament')}
-                    disabled={Boolean(deleting)}
-                    onClick={() => void handleDelete(t.id)}
-                    className="text-error-400 hover:bg-error-500/10"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
+                  <details className="event-more">
+                    <summary>{t('More options')}</summary>
+                    <Link
+                      className="text-link"
+                      to={{ name: 'tournamentEditor', id: event.id }}
+                    >
+                      {t('Edit Tournament')}
+                    </Link>
+                    <Link
+                      className="text-link"
+                      to={{ name: 'tournament', id: event.id }}
+                    >
+                      {t('Preview event')}
+                    </Link>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      disabled={Boolean(deleting)}
+                      onClick={() => void handleDelete(event.id)}
+                    >
+                      <Trash2 size={16} />
+                      {t('Delete tournament')}
+                    </Button>
+                  </details>
                 </div>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
+              </article>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

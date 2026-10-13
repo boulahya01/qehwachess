@@ -9,7 +9,7 @@ import { AuthMessage } from '@/components/auth/AuthParts';
 import { Calendar, MapPin, Clock, CheckCircle2, Trophy } from 'lucide-react';
 import { Registration, CasualMeetup, Tournament } from '@/types';
 import { formatDateRange, getDaysUntil } from '@/lib/utils';
-import { useLanguage } from '@/context/LanguageContext';
+import { useWorkspaceLanguage as useLanguage } from '@/hooks/useWorkspaceLanguage';
 
 export function PlayerDashboard() {
   const { t, language } = useLanguage();
@@ -101,15 +101,21 @@ export function PlayerDashboard() {
     (reg) => reg.tournament && getDaysUntil(reg.tournament.start_date) < 0
   );
   const nextGame = games[0];
-  const nextTournament = upcoming[0]?.tournament;
+  const nextTournament = upcoming.find(
+    (reg) => reg.status === 'confirmed'
+  )?.tournament;
   const meetupFirst =
     nextGame &&
     (!nextTournament || nextGame.starts_at < nextTournament.start_date);
   const nextTitle = meetupFirst ? nextGame.title : nextTournament?.title;
   return (
-    <div className="v2-container pt-24 pb-20">
+    <div className="v2-container account-page">
       <header className="security-heading">
+        <p className="hero-eyebrow">{t('Your account')}</p>
         <h1>{t('My games')}</h1>
+        <p className="field-hint">
+          {t('Your next game and everything you have joined.')}
+        </p>
       </header>
       <AuthMessage message={error} />
       {error && (
@@ -235,7 +241,10 @@ function RegCard({ reg, past = false }: { reg: Registration; past?: boolean }) {
 
   return (
     <Link to={{ name: 'tournament', id: tournament.id }}>
-      <Card hover className="p-5 flex items-center gap-4 group cursor-pointer">
+      <Card
+        hover
+        className="p-5 flex flex-wrap items-center gap-4 group cursor-pointer"
+      >
         <div className="flex-shrink-0 w-14 h-14 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center">
           <Trophy className="w-6 h-6 text-brand-400" />
         </div>
@@ -243,7 +252,7 @@ function RegCard({ reg, past = false }: { reg: Registration; past?: boolean }) {
           <h3 className="font-semibold text-white group-hover:text-brand-300 transition-colors truncate">
             {tournament.title}
           </h3>
-          <div className="flex items-center gap-3 mt-1.5 text-sm text-gray-500">
+          <div className="flex flex-wrap items-center gap-3 mt-1.5 text-sm text-gray-500">
             <span className="flex items-center gap-1">
               <MapPin className="w-3.5 h-3.5" />
               {tournament.city?.name}
@@ -258,7 +267,7 @@ function RegCard({ reg, past = false }: { reg: Registration; past?: boolean }) {
             </span>
           </div>
         </div>
-        <div className="hidden sm:flex flex-col items-end gap-1">
+        <div className="flex basis-full sm:basis-auto flex-col items-start sm:items-end gap-1">
           <Badge
             className={
               reg.status === 'confirmed'

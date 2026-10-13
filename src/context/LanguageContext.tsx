@@ -3,6 +3,7 @@ import { createContext, ReactNode, useContext, useEffect, useState } from 'react
 import { authTranslations } from '@/lib/translationsAuth';
 import { calmTranslations } from '@/lib/translationsCalm';
 import { v2Translations } from '@/lib/translationsV2';
+import { navigationTranslations } from '@/lib/translationsNavigation';
 
 export type Language = 'en' | 'fr' | 'ar';
 
@@ -954,7 +955,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   }
 
   function t(text: string) {
-    return language === 'en' ? text : calmTranslations[language][text] ?? authTranslations[language][text] ?? v2Translations[language][text] ?? translations[language][text] ?? text;
+    return language === 'en' ? text : navigationTranslations[language][text] ?? calmTranslations[language][text] ?? authTranslations[language][text] ?? v2Translations[language][text] ?? translations[language][text] ?? text;
   }
 
   return (

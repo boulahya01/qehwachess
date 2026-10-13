@@ -92,22 +92,11 @@ export function Navbar() {
   const account = user ? (
     <>
       <Link to={{ name: 'dashboard' }} className="nav-link">
-        {t('My games')}
+        {t('Account home')}
       </Link>
-      <Link to={{ name: 'profile' }} className="nav-link">
-        {t('Profile Settings')}
+      <Link to={{ name: 'settings' }} className="nav-link">
+        {t('Settings')}
       </Link>
-      <Link to={{ name: 'security' }} className="nav-link">
-        {t('Sign-in & security')}
-      </Link>
-      <Link to={{ name: 'organizer' }} className="nav-link">
-        {t('Organizer workspace')}
-      </Link>
-      {['organizer', 'admin'].includes(profile?.role ?? '') && (
-        <Link to={{ name: 'clubManagement' }} className="nav-link">
-          {t('Manage Clubs')}
-        </Link>
-      )}
       {profile?.role === 'admin' && (
         <Link to={{ name: 'admin' }} className="nav-link">
           {t('Administration')}
@@ -171,6 +160,35 @@ export function Navbar() {
         <button
           type="button"
           className="nav-link"
+          aria-current={
+            (name === 'play' &&
+              ['meetups', 'tournaments', 'tournament', 'map'].includes(
+                route.name
+              )) ||
+            (name === 'community' &&
+              [
+                'players',
+                'publicProfile',
+                'clubs',
+                'club',
+                'cities',
+                'city',
+              ].includes(route.name)) ||
+            (name === 'account' &&
+              [
+                'dashboard',
+                'settings',
+                'profile',
+                'security',
+                'organizer',
+                'tournamentEditor',
+                'clubManagement',
+                'discordIntegration',
+                'admin',
+              ].includes(route.name))
+              ? 'page'
+              : undefined
+          }
           aria-expanded={open === name}
           aria-controls={`nav-${name}`}
           onClick={(e) => {
@@ -215,6 +233,7 @@ export function Navbar() {
                 <Link
                   to={{ name: user ? 'messages' : 'signin' }}
                   className="nav-link"
+                  aria-current={route.name === 'messages' ? 'page' : undefined}
                 >
                   {t('Messages')}
                 </Link>
@@ -307,9 +326,14 @@ export function Navbar() {
               name: 'players' as const,
               label: 'Community',
               icon: Users,
-              active: ['players', 'clubs', 'club', 'cities', 'city'].includes(
-                route.name
-              ),
+              active: [
+                'players',
+                'publicProfile',
+                'clubs',
+                'club',
+                'cities',
+                'city',
+              ].includes(route.name),
             },
             {
               name: user ? ('messages' as const) : ('signin' as const),
@@ -325,6 +349,8 @@ export function Navbar() {
                 'dashboard',
                 'profile',
                 'security',
+                'settings',
+                'discordIntegration',
                 'organizer',
                 'clubManagement',
                 'admin',

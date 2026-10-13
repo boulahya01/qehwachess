@@ -26,7 +26,7 @@ import {
   tournamentStatusLabels,
   tournamentStatusColors,
 } from '@/lib/utils';
-import { useLanguage } from '@/context/LanguageContext';
+import { useWorkspaceLanguage as useLanguage } from '@/hooks/useWorkspaceLanguage';
 
 export function AdminDashboard() {
   const { t, language } = useLanguage();
@@ -39,9 +39,10 @@ export function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [dataError, setDataError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [tab, setTab] = useState<'tournaments' | 'users' | 'overview'>(
-    'overview'
-  );
+  const [tab, setTab] = useState<
+    'review' | 'tournaments' | 'users' | 'overview'
+  >('review');
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
 
   useEffect(() => {
     if (authLoading) return;
@@ -50,7 +51,8 @@ export function AdminDashboard() {
       return;
     }
 
-    (async () => {
+    let active = true;
+    void (async () => {
       setLoading(true);
       setDataError(null);
       const [tournamentResult, profileResult, registrationResult] =
@@ -61,19 +63,24 @@ export function AdminDashboard() {
               '*, city:cities(*), organizer:profiles!tournaments_organizer_id_fkey(*)'
             )
             .order('created_at', { ascending: false }),
-          supabase
-            .from('profiles')
-            .select('*, city:cities(*)')
-            .order('created_at', { ascending: false }),
-          supabase
-            .from('registrations')
-            .select(
-              '*, tournament:tournaments(title), player:profiles!registrations_player_id_fkey(full_name, username)'
-            )
-            .order('registered_at', { ascending: false })
-            .limit(20),
+          tab === 'overview' || tab === 'users'
+            ? supabase
+                .from('profiles')
+                .select('*, city:cities(*)')
+                .order('created_at', { ascending: false })
+            : Promise.resolve({ data: [], error: null }),
+          tab === 'overview'
+            ? supabase
+                .from('registrations')
+                .select(
+                  '*, tournament:tournaments(title), player:profiles!registrations_player_id_fkey(full_name, username)'
+                )
+                .order('registered_at', { ascending: false })
+                .limit(20)
+            : Promise.resolve({ data: [], error: null }),
         ]);
 
+      if (!active) return;
       setTournaments(tournamentResult.data ?? []);
       setProfiles(profileResult.data ?? []);
       setRegistrations(registrationResult.data ?? []);
@@ -83,11 +90,19 @@ export function AdminDashboard() {
         registrationResult.error,
       ].filter((error) => error !== null);
       if (errors.length > 0) {
-        setDataError(errors.map((error) => error.message).join(' '));
+        setDataError('Please try again.');
       }
       setLoading(false);
-    })();
-  }, [authLoading, user, profile?.role]);
+    })().catch(() => {
+      if (active) {
+        setDataError('Please try again.');
+        setLoading(false);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, [authLoading, user, profile?.role, tab]);
 
   if (authLoading)
     return (
@@ -101,31 +116,44 @@ export function AdminDashboard() {
   }
   if (profile?.role !== 'admin') {
     return (
-      <div className="pt-24">
+      <div className="v2-container account-page">
+        <h1>{t('Access restricted')}</h1>
         <ErrorState
           message={t(
             'Admin access required. This area is restricted to platform administrators.'
           )}
         />
+        <Link to={{ name: 'dashboard' }} className="text-link">
+          {t('Account home')}
+        </Link>
       </div>
     );
   }
 
   async function updateStatus(id: string, status: string) {
+    if (pendingAction) return;
+    setPendingAction(id);
     setActionError(null);
-    const { error } = await supabase
-      .from('tournaments')
-      .update({ status })
-      .eq('id', id);
-    if (error) {
-      setActionError(error.message);
-      return;
+    try {
+      const { data, error } = await supabase
+        .from('tournaments')
+        .update({ status })
+        .eq('id', id)
+        .select('id, status')
+        .single();
+      if (error || !data) throw error || new Error('Update unavailable');
+      setTournaments((current) =>
+        current.map((event) =>
+          event.id === id
+            ? { ...event, status: data.status as Tournament['status'] }
+            : event
+        )
+      );
+    } catch {
+      setActionError(t('Could not update tournament. Please try again.'));
+    } finally {
+      setPendingAction(null);
     }
-    setTournaments(
-      tournaments.map((t) =>
-        t.id === id ? { ...t, status: status as Tournament['status'] } : t
-      )
-    );
   }
 
   async function handleDelete(id: string) {
@@ -155,13 +183,14 @@ export function AdminDashboard() {
   };
 
   const tabs = [
+    { id: 'review' as const, label: t('Approval queue'), icon: Clock },
     { id: 'overview' as const, label: t('Overview'), icon: TrendingUp },
     { id: 'tournaments' as const, label: t('Tournaments'), icon: Trophy },
     { id: 'users' as const, label: t('Users'), icon: Users },
   ];
 
   return (
-    <div className="min-h-screen pt-24 pb-20">
+    <div className="min-h-screen account-page admin-workspace-page">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="flex items-center gap-3 mb-8">
@@ -170,7 +199,7 @@ export function AdminDashboard() {
           </div>
           <div>
             <h1 className="text-3xl font-bold text-white">
-              {t('Admin Panel')}
+              {t('Platform workspace')}
             </h1>
             <p className="text-gray-500 mt-1">
               {t('Platform moderation and management')}
@@ -178,67 +207,78 @@ export function AdminDashboard() {
           </div>
         </div>
 
-        <Link
-          to={{ name: 'discordIntegration', scope: 'official' }}
-          className="action action-link action-secondary mb-6"
-        >
-          {t('Official Discord announcements')}
-        </Link>
+        {tab === 'overview' && (
+          <div className="flex flex-wrap gap-3 mb-6">
+            <Link
+              to={{ name: 'discordIntegration', scope: 'official' }}
+              className="action action-link action-secondary"
+            >
+              {t('Official Discord announcements')}
+            </Link>
+            <Link
+              to={{ name: 'clubManagement' }}
+              className="action action-link action-secondary"
+            >
+              {t('Manage Clubs')}
+            </Link>
+          </div>
+        )}
         {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
-          {[
-            {
-              icon: Trophy,
-              label: t('Tournaments'),
-              value: stats.totalTournaments,
-              color: 'text-brand-400',
-            },
-            {
-              icon: Clock,
-              label: t('Pending Review'),
-              value: stats.pending,
-              color: 'text-amber-400',
-            },
-            {
-              icon: CheckCircle2,
-              label: t('Published'),
-              value: stats.published,
-              color: 'text-success-400',
-            },
-            {
-              icon: Users,
-              label: t('Total Users'),
-              value: stats.totalUsers,
-              color: 'text-brand-400',
-            },
-            {
-              icon: Building2,
-              label: t('Organizers'),
-              value: stats.organizers,
-              color: 'text-accent-400',
-            },
-            {
-              icon: Trophy,
-              label: t('Players'),
-              value: stats.players,
-              color: 'text-gray-400',
-            },
-          ].map((stat, i) => (
-            <Card key={i} className="p-4">
-              <stat.icon className={`w-4 h-4 ${stat.color} mb-2`} />
-              <p className="text-xl font-bold text-white">{stat.value}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{stat.label}</p>
-            </Card>
-          ))}
-        </div>
-
+        {tab === 'overview' && (
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
+            {[
+              {
+                icon: Trophy,
+                label: t('Tournaments'),
+                value: stats.totalTournaments,
+                color: 'text-brand-400',
+              },
+              {
+                icon: Clock,
+                label: t('Pending Review'),
+                value: stats.pending,
+                color: 'text-amber-400',
+              },
+              {
+                icon: CheckCircle2,
+                label: t('Published'),
+                value: stats.published,
+                color: 'text-success-400',
+              },
+              {
+                icon: Users,
+                label: t('Total Users'),
+                value: stats.totalUsers,
+                color: 'text-brand-400',
+              },
+              {
+                icon: Building2,
+                label: t('Organizers'),
+                value: stats.organizers,
+                color: 'text-accent-400',
+              },
+              {
+                icon: Trophy,
+                label: t('Players'),
+                value: stats.players,
+                color: 'text-gray-400',
+              },
+            ].map((stat, i) => (
+              <Card key={i} className="p-4">
+                <stat.icon className={`w-4 h-4 ${stat.color} mb-2`} />
+                <p className="text-xl font-bold text-white">{stat.value}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{stat.label}</p>
+              </Card>
+            ))}
+          </div>
+        )}
         {/* Tabs */}
         {dataError && (
           <div
             role="alert"
             className="mb-6 rounded-xl border border-error-500/30 bg-error-500/10 p-4 text-sm text-error-300"
           >
-            {t('Could not load admin data:')} {dataError}
+            {t('Could not load admin data:')} {t(dataError)}
           </div>
         )}
         {actionError && (
@@ -249,10 +289,15 @@ export function AdminDashboard() {
             {t('Could not update tournament:')} {actionError}
           </div>
         )}
-        <div className="flex gap-1 mb-6 bg-surface-900 border border-surface-700 rounded-xl p-1 w-fit">
+        <nav
+          className="workspace-navigation mb-6"
+          aria-label={t('Platform tools')}
+        >
           {tabs.map((t) => (
             <button
               key={t.id}
+              type="button"
+              aria-current={tab === t.id ? 'page' : undefined}
               onClick={() => setTab(t.id)}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 tab === t.id
@@ -264,87 +309,102 @@ export function AdminDashboard() {
               {t.label}
             </button>
           ))}
-        </div>
+        </nav>
 
         {loading ? (
           <PageLoader />
-        ) : tab === 'overview' ? (
-          <div className="grid lg:grid-cols-2 gap-6">
+        ) : tab === 'overview' || tab === 'review' ? (
+          <div className="grid gap-6">
             {/* Pending tournaments */}
-            <Card className="p-6">
-              <h2 className="text-lg font-bold text-white mb-4">
-                {t('Pending Approvals')}
-              </h2>
-              {tournaments.filter((t) => t.status === 'pending').length ===
-              0 ? (
-                <p className="text-sm text-gray-500">
-                  {t('No tournaments pending review.')}
+            {tab === 'review' && (
+              <Card className="p-6">
+                <h2 className="text-lg font-bold text-white mb-4">
+                  {t('Pending Approvals')}
+                </h2>
+                <p className="field-hint mb-5">
+                  {t(
+                    'Review the details before approving. Approval makes the tournament public and can send configured announcements.'
+                  )}
                 </p>
-              ) : (
-                <div className="flex flex-col gap-3">
-                  {tournaments
-                    .filter((t) => t.status === 'pending')
-                    .slice(0, 5)
-                    .map((t) => (
-                      <div
-                        key={t.id}
-                        className="flex items-center gap-3 p-3 rounded-lg bg-surface-800/50"
-                      >
-                        <Trophy className="w-5 h-5 text-amber-400 flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-white truncate">
-                            {t.title}
-                          </p>
-                          <p className="text-xs text-gray-500">
-                            {t.organizer?.full_name}
-                          </p>
-                        </div>
-                        <Button
-                          size="sm"
-                          onClick={() => updateStatus(t.id, 'published')}
+                {tournaments.filter((t) => t.status === 'pending').length ===
+                0 ? (
+                  <p className="text-sm text-gray-500">
+                    {t('No tournaments pending review.')}
+                  </p>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {tournaments
+                      .filter((t) => t.status === 'pending')
+                      .map((t) => (
+                        <div
+                          key={t.id}
+                          className="flex flex-wrap items-center gap-3 p-3 rounded-lg bg-surface-800/50"
                         >
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          {translate('Approve')}
-                        </Button>
-                      </div>
-                    ))}
-                </div>
-              )}
-            </Card>
+                          <Trophy className="w-5 h-5 text-amber-400 flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-white truncate">
+                              {t.title}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {t.organizer?.full_name}
+                            </p>
+                          </div>
+                          <Link
+                            className="text-link"
+                            to={{ name: 'tournament', id: t.id }}
+                          >
+                            {translate('Review details')}
+                          </Link>
+                          <Button
+                            size="sm"
+                            disabled={Boolean(pendingAction)}
+                            onClick={() => updateStatus(t.id, 'published')}
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            {translate('Approve and publish')}
+                          </Button>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </Card>
+            )}
 
             {/* Recent registrations */}
-            <Card className="p-6">
-              <h2 className="text-lg font-bold text-white mb-4">
-                {t('Recent Registrations')}
-              </h2>
-              {registrations.length === 0 ? (
-                <p className="text-sm text-gray-500">
-                  {t('No registrations yet.')}
-                </p>
-              ) : (
-                <div className="flex flex-col gap-3">
-                  {registrations.slice(0, 5).map((r) => (
-                    <div
-                      key={r.id}
-                      className="flex items-center gap-3 p-3 rounded-lg bg-surface-800/50"
-                    >
-                      <Users className="w-5 h-5 text-brand-400 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-white truncate">
-                          {r.player?.full_name}
-                        </p>
-                        <p className="text-xs text-gray-500 truncate">
-                          {r.tournament?.title}
-                        </p>
+            {tab === 'overview' && (
+              <Card className="p-6">
+                <h2 className="text-lg font-bold text-white mb-4">
+                  {t('Recent Registrations')}
+                </h2>
+                {registrations.length === 0 ? (
+                  <p className="text-sm text-gray-500">
+                    {t('No registrations yet.')}
+                  </p>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {registrations.slice(0, 5).map((r) => (
+                      <div
+                        key={r.id}
+                        className="flex flex-wrap items-center gap-3 p-3 rounded-lg bg-surface-800/50"
+                      >
+                        <Users className="w-5 h-5 text-brand-400 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-white truncate">
+                            {r.player?.full_name}
+                          </p>
+                          <p className="text-xs text-gray-500 truncate">
+                            {r.tournament?.title}
+                          </p>
+                        </div>
+                        <Badge className="bg-brand-500/10 text-brand-300 border-brand-500/30">
+                          {t(r.status)}
+                        </Badge>
                       </div>
-                      <Badge className="bg-brand-500/10 text-brand-300 border-brand-500/30">
-                        {t(r.status)}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </Card>
+                    ))}
+                  </div>
+                )}
+              </Card>
+            )}
           </div>
         ) : tab === 'tournaments' ? (
           <div className="flex flex-col gap-4">
@@ -355,7 +415,10 @@ export function AdminDashboard() {
               />
             ) : (
               tournaments.map((t) => (
-                <Card key={t.id} className="p-5 flex items-center gap-4">
+                <Card
+                  key={t.id}
+                  className="p-5 flex flex-wrap items-center gap-4"
+                >
                   <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-surface-800 border border-surface-700 flex items-center justify-center">
                     <Trophy className="w-5 h-5 text-brand-400" />
                   </div>
@@ -392,7 +455,7 @@ export function AdminDashboard() {
                         onClick={() => updateStatus(t.id, 'published')}
                       >
                         <CheckCircle2 className="w-3.5 h-3.5" />
-                        {translate('Approve')}
+                        {translate('Approve and publish')}
                       </Button>
                     )}
                     {t.status === 'published' && (
@@ -427,7 +490,10 @@ export function AdminDashboard() {
               />
             ) : (
               profiles.map((p) => (
-                <Card key={p.id} className="p-5 flex items-center gap-4">
+                <Card
+                  key={p.id}
+                  className="p-5 flex flex-wrap items-center gap-4"
+                >
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
                     {p.full_name?.charAt(0)}
                   </div>

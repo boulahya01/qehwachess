@@ -178,9 +178,9 @@ export function SecurityPage() {
   }
   return (
     <div className="v2-container account-security">
-      <Link to={{ name: 'profile' }} className="text-link">
+      <Link to={{ name: 'settings' }} className="text-link">
         <ArrowLeft size={16} className="direction-arrow" />
-        {t('Back to profile')}
+        {t('Settings')}
       </Link>
       <header className="security-heading">
         <p className="auth-eyebrow">{t('Account settings')}</p>

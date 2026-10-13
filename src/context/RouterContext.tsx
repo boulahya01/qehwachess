@@ -18,7 +18,11 @@ type Route =
   | { name: 'meetups' }
   | { name: 'players' }
   | { name: 'map' }
-  | { name: 'clubManagement' }
+  | {
+      name: 'clubManagement';
+      clubId?: string;
+      section?: 'events' | 'members' | 'teams';
+    }
   | {
       name: 'discordIntegration';
       scope: 'club' | 'official';
@@ -37,9 +41,11 @@ type Route =
   | { name: 'resetPassword' }
   | { name: 'authCallback'; tournamentId?: string }
   | { name: 'security' }
-  | { name: 'dashboard' }
+  | { name: 'dashboard'; section?: 'games' | 'events' | 'clubs' }
+  | { name: 'settings' }
+  | { name: 'publicProfile'; id: string }
   | { name: 'organizer' }
-  | { name: 'tournamentEditor'; id?: string }
+  | { name: 'tournamentEditor'; id?: string; clubId?: string }
   | { name: 'admin' }
   | { name: 'profile' };
 
@@ -70,9 +76,17 @@ function parseHash(): Route {
   if (parts[0] === 'tournaments' && parts[1])
     return { name: 'tournament', id: parts[1] };
   if (parts[0] === 'meetups') return { name: 'meetups' };
-  if (parts[0] === 'players') return { name: 'players' };
+  if (parts[0] === 'players' && !parts[1]) return { name: 'players' };
   if (parts[0] === 'map') return { name: 'map' };
-  if (parts[0] === 'club-management') return { name: 'clubManagement' };
+  if (parts[0] === 'club-management') {
+    const section = new URLSearchParams(query).get('section');
+    return {
+      name: 'clubManagement',
+      clubId: parts[1],
+      section:
+        section === 'members' || section === 'teams' ? section : 'events',
+    };
+  }
   if (
     parts[0] === 'integrations' &&
     parts[1] === 'discord' &&
@@ -104,7 +118,16 @@ function parseHash(): Route {
       ),
     };
   }
-  if (parts[0] === 'dashboard') return { name: 'dashboard' };
+  if (parts[0] === 'dashboard' || parts[0] === 'account') {
+    const section = parts[1];
+    return {
+      name: 'dashboard',
+      section: section === 'events' || section === 'clubs' ? section : 'games',
+    };
+  }
+  if (parts[0] === 'settings') return { name: 'settings' };
+  if (parts[0] === 'players' && parts[1])
+    return { name: 'publicProfile', id: parts[1] };
   if (parts[0] === 'forgot-password')
     return {
       name: 'forgotPassword',
@@ -118,6 +141,7 @@ function parseHash(): Route {
     return {
       name: 'tournamentEditor',
       id: parts[2] === 'new' ? undefined : parts[2],
+      clubId: validTournamentId(new URLSearchParams(query).get('club')),
     };
   if (parts[0] === 'organizer') return { name: 'organizer' };
   if (parts[0] === 'admin') return { name: 'admin' };
@@ -140,7 +164,7 @@ function routeToHash(route: Route): string {
     case 'map':
       return '/map';
     case 'clubManagement':
-      return '/club-management';
+      return `/club-management${route.clubId ? '/' + route.clubId : ''}${route.section ? '?section=' + route.section : ''}`;
     case 'discordIntegration':
       return (
         '/integrations/discord/' +
@@ -165,7 +189,11 @@ function routeToHash(route: Route): string {
       return `/${route.name}${tournamentId ? `?tournament=${tournamentId}` : ''}`;
     }
     case 'dashboard':
-      return '/dashboard';
+      return `/dashboard${route.section && route.section !== 'games' ? '/' + route.section : ''}`;
+    case 'settings':
+      return '/settings';
+    case 'publicProfile':
+      return `/players/${route.id}`;
     case 'forgotPassword':
       return `/forgot-password${validTournamentId(route.tournamentId) ? `?tournament=${route.tournamentId}` : ''}`;
     case 'resetPassword':
@@ -177,12 +205,17 @@ function routeToHash(route: Route): string {
     case 'organizer':
       return '/organizer';
     case 'tournamentEditor':
-      return `/organizer/tournaments/${route.id ?? 'new'}`;
+      return `/organizer/tournaments/${route.id ?? 'new'}${validTournamentId(route.clubId) ? '?club=' + route.clubId : ''}`;
     case 'admin':
       return '/admin';
     case 'profile':
       return '/profile';
   }
+}
+
+// Grouped destinations need distinct error boundaries without retaining OAuth tickets.
+export function getRouteIdentity(route: Route): string {
+  return routeToHash(route);
 }
 
 export function RouterProvider({ children }: { children: ReactNode }) {

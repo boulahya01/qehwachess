@@ -11,7 +11,7 @@ import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { Field } from '@/components/ui/Field';
 import { PageLoader } from '@/components/ui/Feedback';
 import { ArrowRight, Save, ImageUp, ChevronDown } from 'lucide-react';
-import { useLanguage } from '@/context/LanguageContext';
+import { useWorkspaceLanguage as useLanguage } from '@/hooks/useWorkspaceLanguage';
 
 export function ProfilePage() {
   const { t } = useLanguage();
@@ -207,8 +207,14 @@ export function ProfilePage() {
   return (
     <div className="v2-container account-profile">
       <header className="security-heading">
+        <Link to={{ name: 'settings' }} className="text-link">
+          {t('Settings')}
+        </Link>
         <p className="auth-eyebrow">{t('Account settings')}</p>
-        <h1>{t('Profile Settings')}</h1>
+        <h1>{t('Edit profile')}</h1>
+        <Link to={{ name: 'publicProfile', id: user.id }} className="text-link">
+          {t('View public profile')}
+        </Link>
         <p>{t('Every detail here is optional. Add what helps you connect.')}</p>
         <Link to={{ name: 'security' }} className="text-link">
           {t('Sign-in & security')}

@@ -1,7 +1,12 @@
 import { SectionNavigation } from '@/components/SectionNavigation';
+import { AccountNavigation } from '@/components/AccountNavigation';
 import { lazy, Suspense } from 'react';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
-import { RouterProvider, useRouter } from '@/context/RouterContext';
+import {
+  RouterProvider,
+  useRouter,
+  getRouteIdentity,
+} from '@/context/RouterContext';
 import { LanguageProvider, useLanguage } from '@/context/LanguageContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { Navbar } from '@/components/Navbar';
@@ -96,6 +101,17 @@ const AdminDashboard = lazy(() =>
 const ProfilePage = lazy(() =>
   import('@/pages/ProfilePage').then((m) => ({ default: m.ProfilePage }))
 );
+const SettingsPage = lazy(() =>
+  import('@/pages/SettingsPage').then((m) => ({ default: m.SettingsPage }))
+);
+const MyClubsPage = lazy(() =>
+  import('@/pages/MyClubsPage').then((m) => ({ default: m.MyClubsPage }))
+);
+const PublicProfilePage = lazy(() =>
+  import('@/pages/PublicProfilePage').then((m) => ({
+    default: m.PublicProfilePage,
+  }))
+);
 const DiscordIntegrationPage = lazy(() =>
   import('@/pages/DiscordIntegrationPage').then((m) => ({
     default: m.DiscordIntegrationPage,
@@ -105,7 +121,6 @@ const DiscordIntegrationPage = lazy(() =>
 function AppRoutes() {
   const { route } = useRouter();
   const { t } = useLanguage();
-  const { profile } = useAuth();
 
   const renderPage = () => {
     switch (route.name) {
@@ -142,8 +157,13 @@ function AppRoutes() {
       case 'signup':
         return <SignUpPage />;
       case 'dashboard':
-        if (profile?.role === 'admin') return <AdminDashboard />;
+        if (route.section === 'events') return <OrganizerDashboard />;
+        if (route.section === 'clubs') return <MyClubsPage />;
         return <PlayerDashboard />;
+      case 'settings':
+        return <SettingsPage />;
+      case 'publicProfile':
+        return <PublicProfilePage key={route.id} id={route.id} />;
       case 'forgotPassword':
         return <ForgotPasswordPage />;
       case 'resetPassword':
@@ -192,8 +212,9 @@ function AppRoutes() {
         className={`flex-1 ${isAuthPage ? '' : 'page-surface'} route-${route.name}`}
       >
         <SectionNavigation />
+        <AccountNavigation />
         <PageErrorBoundary
-          key={`${route.name}:${'id' in route ? route.id : ''}`}
+          key={getRouteIdentity(route)}
           message={t(
             'This page could not be loaded. Please reload and try again.'
           )}

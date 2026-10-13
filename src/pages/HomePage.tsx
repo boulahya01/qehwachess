@@ -5,10 +5,14 @@ import { TournamentCard } from '@/components/TournamentCard';
 import { PageLoader, EmptyState, ErrorState } from '@/components/ui/Feedback';
 import { ArrowRight, MapPin, Users, Crown } from 'lucide-react';
 import { formatDateRange, getDaysUntil } from '@/lib/utils';
-import { useLanguage } from '@/context/LanguageContext';
+import { useWorkspaceLanguage as useLanguage } from '@/hooks/useWorkspaceLanguage';
+import { useTheme } from '@/context/ThemeContext';
+import { useAuth } from '@/context/AuthContext';
 
 export function HomePage() {
   const { t, language } = useLanguage();
+  const { theme } = useTheme();
+  const { user } = useAuth();
   const { tournaments, loading, error } = useTournaments();
   const upcoming = useMemo(
     () =>
@@ -31,47 +35,69 @@ export function HomePage() {
       })
       .slice(0, 4);
   }, [upcoming]);
-  const locale = language === 'fr' ? 'fr-FR' : language === 'ar' ? 'ar-MA' : 'en-GB';
+  const locale =
+    language === 'fr' ? 'fr-FR' : language === 'ar' ? 'ar-MA' : 'en-GB';
 
   return (
     <div>
-      <section className="v2-container home-hero" aria-labelledby="home-title">
+      <section className="map-hero" aria-labelledby="home-title">
+        <img
+          className="map-hero-background"
+          src={`/images/morocco-map-${theme}.svg`}
+          width={1440}
+          height={880}
+          alt=""
+          aria-hidden="true"
+          {...{ fetchpriority: 'high' }}
+        />
+        <div className="map-hero-shade" aria-hidden="true" />
         <div className="hero-copy">
           <p className="hero-eyebrow">
             <MapPin size={16} />
             {t('Chess across Morocco')}
           </p>
-          <h1 id="home-title" className="hero-title">
-            {t('Good games.')}
-            <span className="block">{t('Better company.')}</span>
+          <h1 id="home-title" className="map-hero-title">
+            Qehwa Chess
           </h1>
+          <h2 className="map-hero-subtitle">
+            {t('Find your people. Play over the board.')}
+          </h2>
           <p className="hero-description">
-            {t(
-              'Find tournaments, café games, and your local chess community. Make your next move together.'
-            )}
+            {t('Find local games, chess clubs and tournaments across Morocco.')}
           </p>
           <div className="hero-actions">
-            <Link to={{ name: 'meetups' }} className="action action-link action-primary">
+            <Link
+              to={{ name: 'meetups' }}
+              className="action action-link action-primary"
+            >
               {t('Find a game')}
               <ArrowRight size={18} className="direction-arrow" />
             </Link>
-            <Link to={{ name: 'tournaments' }} className="text-link">
+            <Link
+              to={{ name: 'tournaments' }}
+              className="action action-link action-secondary"
+            >
               {t('Explore tournaments')}
               <ArrowRight size={17} className="direction-arrow" />
             </Link>
           </div>
         </div>
-        <div className="hero-art">
-          <img
-            src="/images/chess-hero-v2.webp"
-            srcSet="/images/chess-hero-v2-640.webp 640w, /images/chess-hero-v2.webp 1200w"
-            sizes="(max-width: 767px) calc(100vw - 32px), 46vw"
-            alt={t('Ivory knight and jade rook on a chessboard')}
-            width={1200}
-            height={800}
-            {...{ fetchpriority: 'high' }}
-          />
+        <div className="map-hero-foot v2-container">
+          <p>{t('Meet nearby. Play together.')}</p>
+          <Link to={{ name: 'map' }} className="text-link">
+            <MapPin size={18} />
+            {t('Explore the event map')}
+            <ArrowRight size={17} className="direction-arrow" />
+          </Link>
         </div>
+        <a
+          className="map-credit"
+          href="https://www.naturalearthdata.com/about/terms-of-use/"
+          target="_blank"
+          rel="noreferrer"
+        >
+          Natural Earth
+        </a>
       </section>
 
       <div className="v2-container discovery-strip">
@@ -79,9 +105,16 @@ export function HomePage() {
           <MapPin size={18} />
           {t('Find chess in your city')}
         </p>
-        <nav className="city-shortcuts" aria-label={t('Cities with upcoming tournaments')}>
+        <nav
+          className="city-shortcuts"
+          aria-label={t('Cities with upcoming tournaments')}
+        >
           {activeCities.map((city) => (
-            <Link key={city.id} to={{ name: 'city', id: city.id }} className="city-shortcut">
+            <Link
+              key={city.id}
+              to={{ name: 'city', id: city.id }}
+              className="city-shortcut"
+            >
               {city.name}
             </Link>
           ))}
@@ -92,7 +125,10 @@ export function HomePage() {
         </nav>
       </div>
 
-      <section className="v2-container v2-section" aria-labelledby="events-heading">
+      <section
+        className="v2-container v2-section"
+        aria-labelledby="events-heading"
+      >
         <div className="section-toolbar">
           <div>
             <h2 id="events-heading" className="section-heading">
@@ -121,7 +157,9 @@ export function HomePage() {
           <EmptyState
             icon={<Crown size={36} />}
             title={t('No upcoming tournaments yet')}
-            description={t('There are still people to play with. Explore casual meetups near you.')}
+            description={t(
+              'There are still people to play with. Explore casual meetups near you.'
+            )}
             action={
               <Link to={{ name: 'meetups' }} className="text-link">
                 {t('Browse meetups')}
@@ -132,7 +170,10 @@ export function HomePage() {
         )}
       </section>
 
-      <section className="v2-container community-grid" aria-label={t('Find your community')}>
+      <section
+        className="v2-container community-grid"
+        aria-label={t('Find your community')}
+      >
         <div className="community-primary">
           <div className="community-copy">
             <h2>{t('The best part is who you meet.')}</h2>
@@ -170,7 +211,10 @@ export function HomePage() {
       </section>
 
       {!loading && !error && upcoming.length > 0 && (
-        <section className="v2-container v2-section schedule" aria-labelledby="schedule-heading">
+        <section
+          className="v2-container v2-section schedule"
+          aria-labelledby="schedule-heading"
+        >
           <div>
             <h2 id="schedule-heading" className="section-heading">
               {t('Put chess on your calendar.')}
@@ -193,15 +237,25 @@ export function HomePage() {
                   className="schedule-row"
                 >
                   <div className="schedule-date" aria-hidden="true">
-                    <strong>{date.toLocaleDateString(locale, { day: '2-digit' })}</strong>
-                    <span>{date.toLocaleDateString(locale, { month: 'short' })}</span>
+                    <strong>
+                      {date.toLocaleDateString(locale, { day: '2-digit' })}
+                    </strong>
+                    <span>
+                      {date.toLocaleDateString(locale, { month: 'short' })}
+                    </span>
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h3 className="font-medium text-lg leading-snug">{event.title}</h3>
+                    <h3 className="font-medium text-lg leading-snug">
+                      {event.title}
+                    </h3>
                     <p className="text-sm text-gray-500 mt-1">
                       {event.city?.name}
                       <span className="block text-xs mt-1">
-                        {formatDateRange(event.start_date, event.end_date, language)}
+                        {formatDateRange(
+                          event.start_date,
+                          event.end_date,
+                          language
+                        )}
                       </span>
                     </p>
                   </div>
@@ -223,7 +277,10 @@ export function HomePage() {
               )}
             </p>
           </div>
-          <Link to={{ name: 'signup' }} className="action action-link action-secondary">
+          <Link
+            to={{ name: user ? 'organizer' : 'signup' }}
+            className="action action-link action-secondary"
+          >
             {t('Become an Organizer')}
             <ArrowRight size={17} className="direction-arrow" />
           </Link>

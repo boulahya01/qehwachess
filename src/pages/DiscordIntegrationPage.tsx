@@ -14,6 +14,8 @@ import { Field } from '@/components/ui/Field';
 import { Button } from '@/components/ui/Button';
 import { discordTranslations } from '@/lib/translationsDiscord';
 import { Plug, CheckCircle2, ExternalLink } from 'lucide-react';
+import { ClubWorkspaceNavigation } from '@/components/ClubWorkspaceNavigation';
+import { supabase } from '@/lib/supabase';
 export function DiscordIntegrationPage() {
   const { route, navigate, confirmLeave } = useRouter();
   const { user } = useAuth(),
@@ -29,6 +31,26 @@ export function DiscordIntegrationPage() {
   const callbackError =
     route.name === 'discordIntegration' ? route.error : undefined;
   const target = { scope, club_id: clubId };
+  const [club, setClub] = useState<{
+    name: string;
+    organizer_id: string;
+  } | null>(null);
+  useEffect(() => {
+    let active = true;
+    setClub(null);
+    if (clubId)
+      void (async () => {
+        const result = await supabase
+          .from('clubs')
+          .select('name, organizer_id')
+          .eq('id', clubId)
+          .maybeSingle();
+        if (active && !result.error) setClub(result.data);
+      })();
+    return () => {
+      active = false;
+    };
+  }, [clubId]);
   const [status, setStatus] = useState<DiscordStatus | null>(null);
   const [loading, setLoading] = useState(true),
     [busy, setBusy] = useState(false);
@@ -160,10 +182,24 @@ export function DiscordIntegrationPage() {
     <div className="v2-container discord-settings">
       <Link
         className="text-link"
-        to={{ name: scope === 'club' ? 'clubManagement' : 'admin' }}
+        to={
+          scope === 'club'
+            ? { name: 'clubManagement', clubId: clubId ?? undefined }
+            : { name: 'admin' }
+        }
       >
         {t('Back to workspace')}
       </Link>
+      {clubId && club && status && (
+        <>
+          <ClubWorkspaceNavigation
+            clubId={clubId}
+            clubName={club.name}
+            section="discord"
+            canConfigureDiscord={club.organizer_id === user.id}
+          />
+        </>
+      )}
       <header className="security-heading">
         <Plug size={24} aria-hidden="true" />
         <h1>{t('Discord announcements')}</h1>
