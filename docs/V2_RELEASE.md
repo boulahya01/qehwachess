@@ -2,7 +2,7 @@
 
 ## Versioning
 
-Development branch: `codex/v2-release`.
+Development branch: `v2/release`.
 
 Use `2.0.0-beta.N` for review builds and increase N for each published beta. Keep package.json and package-lock.json aligned. Use `2.0.0` and a matching `v2.0.0` Git tag only when the stable release checks pass. Never label a beta deployment as the stable release.
 
