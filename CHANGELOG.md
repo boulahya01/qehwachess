@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.0.0-beta.7 — 2026-10-13
+
+- Add tenant-scoped Discord server connection and announcement settings to club and admin workspaces, with explicit saves, EN/FR/AR feedback, test, disconnect and recent delivery status.
+- Queue the first approved tournament publication for eligible official/club channels, with opt-out, quiet posts, mention suppression and overlapping-destination deduplication.
+- Run delivery in Supabase Edge Functions using server-only credentials, Vault-authenticated Cron, bounded retries and visible uncertain delivery handling.
+- Document separate Discord consent and deployment setup; extend privacy information and add permission, publication and delivery regressions.
+
 ## 2.0.0-beta.5
 
 - Keep email-change feedback accurate when the backend confirms changes immediately or requires confirmation links.
