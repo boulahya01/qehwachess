@@ -12,7 +12,7 @@ React, TypeScript, Vite, Tailwind 3, and Supabase remain the application stack. 
 
 Colors, surfaces, feedback, and motion share semantic theme tokens in src/index.css. Jade is the interface accent. Buttons use 12px corners, cards 20px, and large editorial panels 24-28px. Navigation uses layer 40, menus 50, and dialogs 100. New controls support keyboard focus, labelled inputs, touch targets, and reduced motion.
 
-The homepage loads responsive local WebP artwork. The community images are illustrative artwork, not documentary photos of listed venues or members. The interactive map remains on its dedicated route.
+The homepage uses a lightweight local geographic backdrop with light and dark variants. Community WebP images remain illustrative artwork, not documentary photos of listed venues or members. The interactive map remains on its dedicated route. See [HOMEPAGE_MAP.md](HOMEPAGE_MAP.md) for the geographic asset source and generation.
 
 ## Beta scope
 
@@ -33,6 +33,20 @@ See [V2_BETA6_QA.md](V2_BETA6_QA.md) for the tested scope and remaining acceptan
 - Validate French and Arabic content, keyboard navigation, and representative assistive technology.
 - Measure the built deployment on mobile and desktop. Target LCP <= 2.5s, INP <= 200ms, and CLS <= 0.1 at the 75th percentile; lab measurements do not establish field performance.
 - Map the deployed commit and environment to the intended test or production backend. A new design does not resolve a domain's browser security classification.
+
+## Beta.8 account and workspace sprint
+
+The short-lived `v2/account-workflows` branch coordinates through `v2/release`. Package and lockfile version: `2.0.0-beta.8`.
+
+The account home groups My games, My events, My clubs and Settings. Existing dashboard, organizer, club management, profile, security and Discord URLs remain compatible. Platform tools are visible to administrators only. Permissions, ownership and database role boundaries remain unchanged.
+
+Tournament creation starts as a draft. Submitting enters review; administrator approval publishes the event in the existing transaction. State-specific next actions explain this lifecycle. Waitlisted registrations remain visible without being presented as confirmed next games.
+
+Club workspaces retain the selected club in the URL and a sticky context header across Events, Members, Teams and Discord. Owner-only Discord setup stays protected. The platform workspace starts at the complete approval queue; statistics, users and official Discord configuration are secondary views. Team and statistics data load when their views are opened.
+
+Settings group public identity, private contact, sign-in controls and browser display preferences. Shareable public profile pages use an explicit field allowlist that excludes login email and private phone. Chess account links are labelled as user-provided and unverified.
+
+See [V2_BETA8_QA.md](V2_BETA8_QA.md) for verification and [V2_BETA8_USABILITY.md](V2_BETA8_USABILITY.md) for participant tasks. The owner will test first and invite friends afterwards. Human acceptance remains pending; this is a preview release.
 
 ## Authentication development
 
