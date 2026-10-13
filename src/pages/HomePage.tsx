@@ -36,7 +36,7 @@ export function HomePage() {
   return (
     <div>
       <section className="v2-container home-hero" aria-labelledby="home-title">
-        <div className="hero-copy v2-enter">
+        <div className="hero-copy">
           <p className="hero-eyebrow">
             <MapPin size={16} />
             {t('Chess across Morocco')}

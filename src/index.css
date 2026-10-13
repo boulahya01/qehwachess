@@ -491,6 +491,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: 0.5rem;
+    min-height: 44px;
   }
   .city-shortcut {
     padding: 0.65rem 1rem;

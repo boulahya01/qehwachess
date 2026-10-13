@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.0.0-beta.2
+
+- Load the small homepage directly to prevent the route skeleton and footer from moving during startup.
+- Preload the responsive hero image and show the main heading without an entrance delay.
+- Reserve space for city shortcuts while event data loads.
+- Keep route loading placeholders at least one screen tall.
+
 ## 2.0.0-beta.1
 
 The first V2 preview introduces a shared visual system and redesigns the main discovery and authentication journeys.

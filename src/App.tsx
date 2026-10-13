@@ -7,8 +7,8 @@ import { Navbar } from '@/components/Navbar';
 import { Footer } from '@/components/Footer';
 import { ErrorState, PageLoader } from '@/components/ui/Feedback';
 import { PageErrorBoundary } from '@/components/PageErrorBoundary';
+import { HomePage } from '@/pages/HomePage';
 
-const HomePage = lazy(() => import('@/pages/HomePage').then((m) => ({ default: m.HomePage })));
 const TournamentsPage = lazy(() =>
   import('@/pages/TournamentsPage').then((m) => ({ default: m.TournamentsPage }))
 );
@@ -132,7 +132,7 @@ function AppRoutes() {
         >
           <Suspense
             fallback={
-              <div className="pt-24">
+              <div className="pt-24 min-h-screen">
                 <PageLoader />
               </div>
             }
