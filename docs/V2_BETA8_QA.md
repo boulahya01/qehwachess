@@ -29,3 +29,15 @@ Beta.7 main script: 494.99 KB / 141.04 KB gzip; CSS: 59.55 KB / 12.73 KB gzip. B
 ## Pending acceptance
 
 The owner will test first, then recruit players and an organizer using [the task sheet](V2_BETA8_USABILITY.md). No participant results have been invented. Live staff UI, physical mobile keyboards, native 200% browser zoom and assistive-technology acceptance remain device/session checks. Stable 2.0.0 still waits for functional and visual acceptance.
+
+## Published test preview
+
+Release source: `d60279ea283a135ea0330e8e11c161c09809b9f3` from `boulahya01/qehwachess`, coordinated through `v2/release` and available on `v2/account-workflows`.
+
+Vercel test project `prj_uQoBmzYMaTFBfM5pZEcmfHceQlWH`, deployment `dpl_J3NqqRf4BMFQBjYt6CKgWJvNq8Qv`, is READY and assigned to [qehwachess-test.vercel.app](https://qehwachess-test.vercel.app/). The public entry `/assets/index-xBP6JUJ4.js` matches the local release build and references the isolated Supabase project `wtbfmauzcomvhtxotnki`. Homepage, both map variants, Privacy, Terms and Brand returned HTTP 200 anonymously.
+
+Live organizer checks passed for account games/events/clubs, club events/members/teams, saved Discord connection status, settings and the public profile. The organizer is denied staff access and can return to the account home. Existing Discord deliveries remain intact; no additional announcement was sent.
+
+A 720×500 layout check approximated the available layout space of a 1440px desktop at 200% zoom and kept account destinations accessible without overflow. It does not substitute for the pending native browser zoom check.
+
+Verification notes are a documentation-only follow-up to the deployed release source above.

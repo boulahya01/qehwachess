@@ -42,7 +42,7 @@ The account home groups My games, My events, My clubs and Settings. Existing das
 
 Tournament creation starts as a draft. Submitting enters review; administrator approval publishes the event in the existing transaction. State-specific next actions explain this lifecycle. Waitlisted registrations remain visible without being presented as confirmed next games.
 
-Club workspaces retain the selected club in the URL and a sticky context header across Events, Members, Teams and Discord. Owner-only Discord setup stays protected. The platform workspace starts at the complete approval queue; statistics, users and official Discord configuration are secondary views. Team and statistics data load when their views are opened.
+Club workspaces retain the selected club in the URL and a sticky context header across Events, Members, Teams and Discord. Owner-only Discord setup stays protected. The platform workspace starts at the approval queue; statistics, users and official Discord configuration are secondary views. Team and statistics data load when their views are opened.
 
 Settings group public identity, private contact, sign-in controls and browser display preferences. Shareable public profile pages use an explicit field allowlist that excludes login email and private phone. Chess account links are labelled as user-provided and unverified.
 
