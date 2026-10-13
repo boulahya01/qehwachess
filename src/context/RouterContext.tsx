@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, AnchorHTMLAttributes } from 'react';
 
 type Route =
   | { name: 'home' }
@@ -14,8 +14,8 @@ type Route =
   | { name: 'cities' }
   | { name: 'city'; id: string }
   | { name: 'club'; id: string }
-  | { name: 'signin' }
-  | { name: 'signup' }
+  | { name: 'signin'; tournamentId?: string }
+  | { name: 'signup'; tournamentId?: string }
   | { name: 'dashboard' }
   | { name: 'organizer' }
   | { name: 'admin' }
@@ -28,9 +28,14 @@ interface RouterContextValue {
 
 const RouterContext = createContext<RouterContextValue | undefined>(undefined);
 
+function validTournamentId(value: string | null | undefined): string | undefined {
+  return value && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value) ? value : undefined;
+}
+
 function parseHash(): Route {
   const hash = window.location.hash.slice(1) || '/';
-  const parts = hash.split('/').filter(Boolean);
+  const [path, query] = hash.split('?');
+  const parts = path.split('/').filter(Boolean);
 
   if (parts.length === 0) return { name: 'home' };
   if (parts[0] === 'tournaments' && parts.length === 1) return { name: 'tournaments' };
@@ -46,8 +51,9 @@ function parseHash(): Route {
   if (parts[0] === 'clubs' && parts[1]) return { name: 'club', id: parts[1] };
   if (parts[0] === 'cities' && parts.length === 1) return { name: 'cities' };
   if (parts[0] === 'cities' && parts[1]) return { name: 'city', id: parts[1] };
-  if (parts[0] === 'signin') return { name: 'signin' };
-  if (parts[0] === 'signup') return { name: 'signup' };
+  if (parts[0] === 'signin' || parts[0] === 'signup') {
+    return { name: parts[0], tournamentId: validTournamentId(new URLSearchParams(query).get('tournament')) };
+  }
   if (parts[0] === 'dashboard') return { name: 'dashboard' };
   if (parts[0] === 'organizer') return { name: 'organizer' };
   if (parts[0] === 'admin') return { name: 'admin' };
@@ -72,8 +78,11 @@ function routeToHash(route: Route): string {
     case 'club': return `/clubs/${route.id}`;
     case 'cities': return '/cities';
     case 'city': return `/cities/${route.id}`;
-    case 'signin': return '/signin';
-    case 'signup': return '/signup';
+    case 'signin':
+    case 'signup': {
+      const tournamentId = validTournamentId(route.tournamentId);
+      return `/${route.name}${tournamentId ? `?tournament=${tournamentId}` : ''}`;
+    }
     case 'dashboard': return '/dashboard';
     case 'organizer': return '/organizer';
     case 'admin': return '/admin';
@@ -115,15 +124,17 @@ export function Link({
   children,
   className,
   onClick,
+  ...props
 }: {
   to: Route;
   children: ReactNode;
   className?: string;
   onClick?: () => void;
-}) {
+} & Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href' | 'onClick' | 'children'>) {
   const { navigate } = useRouter();
   return (
     <a
+      {...props}
       href={`#${routeToHash(to)}`}
       className={className}
       onClick={(e) => {

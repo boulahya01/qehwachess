@@ -11,7 +11,7 @@ export function Card({
 }) {
   return (
     <div
-      className={`bg-surface-900 border border-surface-700/60 rounded-2xl ${hover ? 'transition-all duration-300 hover:border-brand-500/40 hover:shadow-xl hover:shadow-brand-500/5 hover:-translate-y-1' : ''} ${className}`}
+      className={`surface-card ${hover ? 'surface-card-interactive' : ''} ${className}`}
     >
       {children}
     </div>

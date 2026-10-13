@@ -31,10 +31,13 @@ export function formatDateRange(startDate: string, endDate: string, language: La
   }
 
   if (start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear()) {
-    return `${start.toLocaleDateString(locale, { day: 'numeric' })}–${end.toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' })}`;
+    if (language === 'en') {
+      return `${start.toLocaleDateString(locale, { month: 'short' })} ${start.getDate()}-${end.getDate()}, ${end.getFullYear()}`;
+    }
+    return `${start.toLocaleDateString(locale, { day: 'numeric' })}-${end.toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' })}`;
   }
 
-  return `${start.toLocaleDateString(locale, { day: 'numeric', month: 'short' })} – ${end.toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' })}`;
+  return `${start.toLocaleDateString(locale, { day: 'numeric', month: 'short' })} - ${end.toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' })}`;
 }
 
 export function formatPrice(amount: number): string {
